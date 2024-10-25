@@ -1,0 +1,10 @@
+results/*
+demo.ipynb
+datasets
+scmamba2/__pycache__/*
+scmmba2/dataset/__pycache__/*
+scmmba2/models/__pycache__/*
+scmmba2/tokenizer/__pycache__/*
+scmmba2/utils/__pycache__/*
+
+
