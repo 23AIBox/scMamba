@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-
+import torch.nn.functional as F 
 
 def contrastive_loss(logits: torch.Tensor) -> torch.Tensor:
     return nn.functional.cross_entropy(
@@ -20,16 +20,16 @@ class CLIPLoss(nn.Module):
         self.logit_scale = nn.Parameter(
             torch.ones([]) * logit_scale, requires_grad=requires_grad
         )
-
+        self.cos = nn.CosineSimilarity(dim=1, eps=1e-6)
     def forward(self, rna_embeds, atac_embeds):
-        # normalized features
-        # atac_embeds = atac_embeds / atac_embeds.norm(dim=-1, keepdim=True)
-        # rna_embeds = rna_embeds / rna_embeds.norm(dim=-1, keepdim=True)
 
         # cosine similarity as logits
         logit_scale = self.logit_scale.exp()
         logits_per_atac = torch.matmul(atac_embeds, rna_embeds.t()) * logit_scale
 
         loss = clip_loss(logits_per_atac)
+        # cosin_similarity = F.cosine_similarity(rna_embeds, atac_embeds)
+        cosin_similarity = 1 - torch.mean(self.cos(rna_embeds, atac_embeds))
+        loss += cosin_similarity
 
         return loss, logits_per_atac

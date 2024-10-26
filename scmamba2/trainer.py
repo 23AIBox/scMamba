@@ -26,13 +26,13 @@ class Trainer:
         self.device = device
         self.criterion = criterion
         self.optimizer = optimizer
-        self.epochs = epochs
+        self.epochs = epochs + init_epoch
         self.init_epoch = init_epoch
         self.checkpoint_dir = checkpoint_dir
         self.writer = writer
 
     def fit(self, train_loader, val_loader=None):
-        for epoch in range(self.init_epoch, self.epochs + self.init_epoch):
+        for epoch in range(self.init_epoch, self.epochs):
             train_loss = self._train_epoch(train_loader, epoch)
             self._log_epoch(epoch, train_loss)
 
@@ -40,9 +40,9 @@ class Trainer:
                 val_loss = self._validate_epoch(val_loader, epoch)
                 self._log_epoch(epoch, val_loss)
 
-            if epoch % 5 == 0:
-                self._save_checkpoint(epoch, train_loss)
-
+            if (epoch + 1) % 5 == 0:
+                self._save_checkpoint(epoch + 1, train_loss)
+        self._save_checkpoint(epoch + 1, train_loss)
         self.writer.close()
 
     def _train_epoch(self, train_loader, epoch: int) -> float:

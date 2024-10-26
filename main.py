@@ -32,18 +32,17 @@ if __name__ == "__main__":
         "--checkpoint", type=str, 
         default=None
     )
-    parser.add_argument("--Retraining", type=bool, default=False)
+    parser.add_argument("--Retraining", type=bool, default=True)
     parser.add_argument("--device", type=str, default='cuda:1')
     parser.add_argument("--gpu_ids", type=list, default=[1])
 
     # DataModule
-    parser.add_argument("--batch_size", type=int, default=128)
+    parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--num_workers", type=int, default=0)
     parser.add_argument(
         "--data_dir", type=str, default="datasets/multiome/PBMC10k.h5mu"
     )
     parser.add_argument("--backed", action="store_true", default=False)
-    parser.add_argument("--split", default=0.9)
     parser.add_argument("--n_top_genes", type=int, default=10000)
     parser.add_argument("--n_top_peaks", type=int, default=20000)
     parser.add_argument("--LSI", type=bool, default=False)
@@ -67,7 +66,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--fast_dev_run", action="store_true", default=False)
     parser.add_argument("--logit_scale", type=float, default=1)
-    parser.add_argument("--epoch_nums", type=int, default=150)
+    parser.add_argument("--epoch_nums", type=int, default=100)
     parser.add_argument("--results_dir", type=str, default='results')
     
     args = parser.parse_args()
@@ -130,16 +129,11 @@ if __name__ == "__main__":
     with open(args.config, 'r') as file:
         config = json.load(file)
     config = MambaConfig(**config)
-    # config = MambaConfig(
-    #     d_model=512,
-    #     n_layer=10,
-    #     vocab_size=16,
-    #     ssm_cfg={"layer": "Mamba2"}
-    # )
 
     if args.checkpoint is None:
         dm = MultiomeModule(
-            mdata, "X_log1p", "X_binarized", num_workers=args.num_workers
+            mdata, "X_log1p", "X_binarized", 
+            batch_size=args.batch_size, num_workers=args.num_workers
         )
         model = scMambaLMHeadModel(
             config=config,
@@ -190,7 +184,8 @@ if __name__ == "__main__":
 
     elif args.Retraining:
         dm = MultiomeModule(
-            mdata, "X_log1p", "X_binarized"
+            mdata, "X_log1p", "X_binarized",
+            batch_size=args.batch_size, num_workers=args.num_workers
         )
         model = scMambaLMHeadModel(
             config=config,
@@ -245,12 +240,12 @@ if __name__ == "__main__":
         
         finally_epoch = trainer.fit(
             train_loader=train_loader,
-            val_loader=val_loader
         )
 
     else:
         dm = MultiomeModule(
-            mdata, "X_log1p", "X_binarized"
+            mdata, "X_log1p", "X_binarized",
+            batch_size=args.batch_size, num_workers=args.num_workers
         )
         model = scMambaLMHeadModel(
             config=config,

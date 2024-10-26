@@ -70,7 +70,7 @@ class scEmbeddings(nn.Module):
 
         if self.position_embeddings is not None:
             embeddings = embeddings + self.position_embeddings
-        # embeddings = self.dropout(embeddings)
+        embeddings = self.dropout(embeddings)
         return embeddings  # [batch_size, num_patches + 1, emded_dim]
 
 
@@ -96,6 +96,7 @@ class PatchEmbeddings(nn.Module):
         self.num_patches = num_patches
         self.feature_size = feature_size
         self.patch_size = patch_size
+        self.active = nn.ELU()
         self.projection = nn.Linear(patch_size, embed_dim)
 
     def forward(self, x):
@@ -104,6 +105,7 @@ class PatchEmbeddings(nn.Module):
             x.shape[0], self.num_patches, self.patch_size
         ) # [batch_size, num_patches, pathc_size]
         x = self.projection(x) # [batch_size, num_patches, emded_dim]
+        # x = self.active(x)
         return x
 
 
