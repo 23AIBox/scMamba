@@ -40,7 +40,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--num_workers", type=int, default=0)
     parser.add_argument(
-        "--data_dir", type=str, default="datasets/multiome/PBMC10k.h5mu"
+        "--data_dir", type=str, default="datasets/multiome/fetal.h5mu"
     )
     parser.add_argument("--backed", action="store_true", default=False)
     parser.add_argument("--n_top_genes", type=int, default=10000)
@@ -51,7 +51,7 @@ if __name__ == "__main__":
 
     # Module
     parser.add_argument("--config", type=str, default="mamba2attn_config.json")
-    parser.add_argument("--lr", type=float, default=1.5e-5)
+    parser.add_argument("--lr", type=float, default=1.5e-4)
     parser.add_argument("--weight_decay", type=float, default=0.05)
     parser.add_argument("--dropout", type=float, default=0.1)
     parser.add_argument("--hidden_dropout_prob", type=float, default=0.1)

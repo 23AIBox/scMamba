@@ -344,7 +344,7 @@ class scATACseqPreprocessor:
 
         # step 3: binarize
         if self.binarize:
-            logger.info("Binarize scATAC-seq cell-by-peak matrix ...")
+            logger.info("Binarizing scATAC-seq cell-by-peak matrix ...")
             binary = adata.X.copy()
             binary[binary > 0] = 1
             key_to_process = self.result_binarize_key or key_to_process

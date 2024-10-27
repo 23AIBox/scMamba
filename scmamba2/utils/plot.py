@@ -28,7 +28,7 @@ def plot_umap(
     metric="euclidean",
     resolution=1,
     use_rep="X",
-    num_threads=8,
+    num_threads=16,
 ):
     """Plot a single UMAP plot"""
     sc.settings.set_figure_params(
@@ -50,7 +50,7 @@ def plot_paired_umap(
         resolution=1,
         metric="euclidean", 
         use_rep="X",
-        num_threads=8,
+        num_threads=16,
 ):
     """Plot paired UMAP plots"""
     sc.settings.set_figure_params(
