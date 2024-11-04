@@ -132,7 +132,7 @@ def compute_foscttm(
     return (foscttm_x + foscttm_y) / 2
 
 def calculate_metrics(
-        adata, 
+        adata: sc.AnnData, 
         cell_type,
         cluster_labels,
         num_threads=16
@@ -149,31 +149,32 @@ def calculate_metrics(
         
         # omics mixing
         BEM_score = batch_entropy_mixing_score(adata.obsm['X_umap'], adata.obs['modality'])
-        SAS = seurat_alignment_score(adata.X, cell_type)
+        SAS = seurat_alignment_score(adata.obsm['X_umap'], cell_type)
         GC = graph_connectivity(adata.X, cell_type)
         ASW_omics = avg_silhouette_width_omics(adata.X, adata.obs['modality'].values, cell_type)
 
     return {
-        "batch entropy mixing score": float(BEM_score),
-        "Seurat alignment score": float(SAS),
-        "Graph connectivity": float(GC),
-        "ASW_omics": float(ASW_omics),
         "ARI": float(ari_score),
         "NMI": float(nmi_score),
         "Mean average precision": float(MAP),
         "ASW_celltype": float(ASW_celltype),
+        
+        "omics entropy mixing score": float(BEM_score),
+        "Seurat alignment score (omics)": float(SAS),
+        "Graph connectivity": float(GC),
+        "ASW_omics": float(ASW_omics),
     }
 
 def omics_mixing(
-        adata, 
+        adata: sc.AnnData, 
         cell_type,
         modality,
         num_threads=16
 ):
     
     with threadpool_limits(limits=num_threads):
-        BEM_score = batch_entropy_mixing_score(adata.X, adata.obs['modality'])
-        SAS = seurat_alignment_score(adata.X, modality)
+        BEM_score = batch_entropy_mixing_score(adata.obsm['X_umap'], adata.obs['modality'])
+        SAS = seurat_alignment_score(adata.obsm['X_umap'], modality)
         GC = graph_connectivity(adata.X, cell_type)
         ASW_omics = avg_silhouette_width_omics(adata.X, modality, cell_type)
 
@@ -185,7 +186,7 @@ def omics_mixing(
     }
 
 def biology_conservation(
-        adata, 
+        adata: sc.AnnData, 
         cell_type,
         num_threads=16
 ):  

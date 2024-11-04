@@ -2,7 +2,7 @@
     "d_model": 1024,
     "d_intermediate": 0,
     "n_layer": 10,
-    "vocab_size": 32,
+    "vocab_size": 50,
     "ssm_cfg": {
         "layer": "Mamba2"
     },

@@ -29,7 +29,8 @@ class CLIPLoss(nn.Module):
 
         loss = clip_loss(logits_per_atac)
         # cosin_similarity = F.cosine_similarity(rna_embeds, atac_embeds)
-        cosin_similarity = 1 - torch.mean(self.cos(rna_embeds, atac_embeds))
-        loss += cosin_similarity
+        cosin_similarity_loss = 1 - torch.mean(self.cos(rna_embeds, atac_embeds))
+        # cosin_similarity_loss = cosin_similarity_loss * logit_scale
+        loss += (cosin_similarity_loss * 0.6)
 
         return loss, logits_per_atac

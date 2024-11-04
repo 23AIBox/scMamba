@@ -7,5 +7,5 @@ scmamba2/models/__pycache__/*
 scmamba2/tokenizer/__pycache__/*
 scmamba2/utils/__pycache__/*
 *log*
-
+tutorials/results/*
 

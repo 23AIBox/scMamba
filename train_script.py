@@ -23,7 +23,7 @@ from scmamba2.utils.metrics import (
 )
 from scmamba2 import logger
 
-torch.cuda.set_device("cuda:1")
+torch.cuda.set_device("cuda:2")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="scMamba")
@@ -33,14 +33,14 @@ if __name__ == "__main__":
         default=None
     )
     parser.add_argument("--Retraining", type=bool, default=True)
-    parser.add_argument("--device", type=str, default='cuda:1')
-    parser.add_argument("--gpu_ids", type=list, default=[1])
+    parser.add_argument("--device", type=str, default='cuda:2')
+    parser.add_argument("--gpu_ids", type=list, default=[2])
 
     # DataModule
     parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--num_workers", type=int, default=0)
     parser.add_argument(
-        "--data_dir", type=str, default="datasets/multiome/downsample/genes_PBMC10k75.h5mu"
+        "--data_dir", type=str, default="datasets/multiome/fetal.h5mu"
     )
     parser.add_argument("--backed", action="store_true", default=False)
     parser.add_argument("--n_top_genes", type=int, default=10000)
@@ -50,7 +50,7 @@ if __name__ == "__main__":
     parser.add_argument("--mask", type=float, default=None)
 
     # Module
-    parser.add_argument("--config", type=str, default="mamba2_config.json")
+    parser.add_argument("--config", type=str, default="mamba2attn_config.json")
     parser.add_argument("--lr", type=float, default=1.5e-4)
     parser.add_argument("--weight_decay", type=float, default=0.05)
     parser.add_argument("--dropout", type=float, default=0.1)
@@ -66,8 +66,8 @@ if __name__ == "__main__":
     )
     parser.add_argument("--fast_dev_run", action="store_true", default=False)
     parser.add_argument("--logit_scale", type=float, default=1)
-    parser.add_argument("--epoch_nums", type=int, default=150)
-    parser.add_argument("--results_dir", type=str, default='results/only_mamba2')
+    parser.add_argument("--epoch_nums", type=int, default=100)
+    parser.add_argument("--results_dir", type=str, default='results')
     
     args = parser.parse_args()
     # torch.cuda.set_device(args.device)
@@ -282,7 +282,7 @@ if __name__ == "__main__":
                 device=device,
                 n_neighbors=30, 
                 metric='cosine', 
-                min_dist=0.5, 
+                min_dist=0.3, 
                 resolution=0.3
             )
             metrics = {}

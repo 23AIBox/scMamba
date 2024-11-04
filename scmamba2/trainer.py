@@ -44,6 +44,7 @@ class Trainer:
                 self._save_checkpoint(epoch + 1, train_loss)
         self._save_checkpoint(epoch + 1, train_loss)
         self.writer.close()
+        return epoch + 1
 
     def _train_epoch(self, train_loader, epoch: int) -> float:
         self.model.train()
@@ -56,9 +57,9 @@ class Trainer:
             running_loss += loss
             loss_all += loss
 
-            if (i + 1) % 30 == 0:
+            if (i + 1) % 100 == 0:
                 avg_loss = running_loss / 30
-                self.writer.add_scalar("train loss (30 avg)", avg_loss, epoch * len(train_loader) + i)
+                self.writer.add_scalar("train loss (100 avg)", avg_loss, epoch * len(train_loader) + i)
                 running_loss = 0.0
 
             loop.set_description(f'Epoch [{epoch}/{self.epochs}]')
