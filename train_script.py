@@ -37,14 +37,14 @@ if __name__ == "__main__":
     parser.add_argument("--gpu_ids", type=list, default=[2])
 
     # DataModule
-    parser.add_argument("--batch_size", type=int, default=256)
+    parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--num_workers", type=int, default=0)
     parser.add_argument(
         "--data_dir", type=str, default="datasets/multiome/fetal.h5mu"
     )
     parser.add_argument("--backed", action="store_true", default=False)
-    parser.add_argument("--n_top_genes", type=int, default=10000)
-    parser.add_argument("--n_top_peaks", type=int, default=20000)
+    parser.add_argument("--n_top_genes", type=int, default=20000)
+    parser.add_argument("--n_top_peaks", type=int, default=40000)
     parser.add_argument("--LSI", type=bool, default=False)
     parser.add_argument("--PCA", type=bool, default=False)
     parser.add_argument("--mask", type=float, default=None)
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--fast_dev_run", action="store_true", default=False)
     parser.add_argument("--logit_scale", type=float, default=1)
-    parser.add_argument("--epoch_nums", type=int, default=100)
+    parser.add_argument("--epoch_nums", type=int, default=150)
     parser.add_argument("--results_dir", type=str, default='results')
     
     args = parser.parse_args()

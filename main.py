@@ -40,10 +40,10 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--num_workers", type=int, default=0)
     parser.add_argument(
-        "--data_dir", type=str, default="datasets/multiome/downsample/genes_PBMC10k75.h5mu"
+        "--data_dir", type=str, default="datasets/multiome/downsample/PBMC10k.h5mu"
     )
     parser.add_argument("--backed", action="store_true", default=False)
-    parser.add_argument("--n_top_genes", type=int, default=10000)
+    parser.add_argument("--n_top_genes", type=int, default=20000)
     parser.add_argument("--n_top_peaks", type=int, default=20000)
     parser.add_argument("--LSI", type=bool, default=False)
     parser.add_argument("--PCA", type=bool, default=False)
@@ -66,8 +66,9 @@ if __name__ == "__main__":
     )
     parser.add_argument("--fast_dev_run", action="store_true", default=False)
     parser.add_argument("--logit_scale", type=float, default=1)
+    parser.add_argument("--cos_simi_scale", type=float, default=0.5)
     parser.add_argument("--epoch_nums", type=int, default=150)
-    parser.add_argument("--results_dir", type=str, default='results/only_mamba2')
+    parser.add_argument("--results_dir", type=str, default='results')
     
     args = parser.parse_args()
     # torch.cuda.set_device(args.device)
@@ -149,7 +150,7 @@ if __name__ == "__main__":
 
         # train the model
         criterion = CLIPLoss(
-            requires_grad=args.requires_grad, logit_scale=args.logit_scale
+            requires_grad=args.requires_grad, logit_scale=args.logit_scale, cos_simi_scale=args.cos_simi_scale
         )
         optimizer = optim.AdamW(
             model.parameters(), lr=args.lr, weight_decay=args.weight_decay

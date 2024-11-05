@@ -18,7 +18,7 @@ from torch import optim
 from tensorboardX import SummaryWriter
 
 from scmamba2.preprocess import Preprocessor, scATACseqPreprocessor
-from scmamba2.dataset.dataset import MultiomeModule
+from scmamba2.dataset.dataset import MultiomeModule, MultiomeDataset
 from scmamba2.models import MambaLMHeadModel, MambaConfig, scMambaLMHeadModel
 from scmamba2.loss import CLIPLoss
 from scmamba2.trainer import Trainer
@@ -27,6 +27,7 @@ from scmamba2.utils.metrics import (
 )
 from scmamba2 import logger
 
+
 def setup_ddp(rank, world_size):
     """Initialize DDP environment."""
     os.environ['MASTER_ADDR'] = 'localhost'
@@ -34,16 +35,16 @@ def setup_ddp(rank, world_size):
     
     # initialize the process group
     dist.init_process_group("nccl", rank=rank, world_size=world_size)
-    torch.cuda.set_device(rank)
+    # torch.cuda.set_device(rank)
 
 def cleanup_ddp():
     """Clean up the DDP environment."""
     dist.destroy_process_group()
 
 def main(rank, world_size, args):
-    dist.init_process_group("nccl")
+    # dist.init_process_group("nccl")
     # rank = dist.get_rank()
-    # print(f"Start running basic DDP example on rank {rank}.")
+    print(f"Start running basic DDP example on rank {rank}.")
 
     setup_ddp(rank, world_size)
 
@@ -120,44 +121,39 @@ def main(rank, world_size, args):
     )
 
     # Set up output directories and logging
-    # data_name = os.path.basename(args.data_dir).split('.')[0]
-    # out_dir = os.path.join(args.results_dir, data_name)
-    # out_dir = f"{out_dir}batchsize{args.batch_size}projection_dim{args.projection_dim}"
-    # os.makedirs(out_dir, exist_ok=True)
-    # if not args.normalize:
-    #     out_dir = f"{out_dir}_no_norm"
-    # os.makedirs(os.path.join(out_dir, 'checkpoints'), exist_ok=True)
+    if rank == 0:
+        data_name = os.path.basename(args.data_dir).split('.')[0]
+        out_dir = os.path.join(args.results_dir, data_name)
+        out_dir = f"{out_dir}batchsize{args.batch_size}projection_dim{args.projection_dim}"
+        os.makedirs(out_dir, exist_ok=True)
+        os.makedirs(os.path.join(out_dir, 'checkpoints'), exist_ok=True)
+        writer = SummaryWriter(f'{out_dir}/runs/exp')
     
-    # if rank == 0:
-    #     writer = SummaryWriter(f'{out_dir}/runs/exp')
 
     # Prepare data loaders with DistributedSampler
-    dm = MultiomeModule(mdata, "X_log1p", "X_binarized", num_workers=args.num_workers)
-    dm.setup(stage="fit")
-    
-    train_sampler = DistributedSampler(dm.train_dataset, num_replicas=world_size, rank=rank)
-    val_sampler = DistributedSampler(dm.val_dataset, num_replicas=world_size, rank=rank)
-
-    train_loader = DataLoader(dm.train_dataset, batch_size=args.batch_size, sampler=train_sampler)
-    val_loader = DataLoader(dm.val_dataset, batch_size=args.batch_size, sampler=val_sampler)
+    train_dataset = MultiomeDataset(mdata, "X_log1p", "X_binarized")
+    train_sampler = DistributedSampler(train_dataset, num_replicas=world_size, rank=rank)
+    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, sampler=train_sampler)
     
     # Initialize Trainer and start training
     if rank == 0:
         logger.info("Training the model ...")
     
-
+    # Train model
     ddp_model.train()
-    loop = tqdm(train_loader, total=len(train_loader), leave=False)
-    for i, (rna, atac) in enumerate(loop):
-        rna, atac = rna.float().to(args.device), atac.float().to(args.device)
-        optimizer.zero_grad()
+    for epoch in range(args.epoch_nums):
+        train_loader.sampler.set_epoch(epoch)
+        loop = tqdm(train_loader, total=len(train_loader), leave=False) if rank == 0 else train_loader
+        for i, (rna, atac) in enumerate(loop):
+            rna, atac = rna.float().to(rank), atac.float().to(rank)
+            optimizer.zero_grad()
 
-        CausalLMOutput = ddp_model(rna, atac, num_last_tokens=1)
-        rna_embeds, atac_embeds = CausalLMOutput.logits_omics_1, CausalLMOutput.logits_omics_2
+            CausalLMOutput = ddp_model(rna, atac, num_last_tokens=1)
+            rna_embeds, atac_embeds = CausalLMOutput.logits_omics_1, CausalLMOutput.logits_omics_2
 
-        loss, similarity = criterion(rna_embeds, atac_embeds)
-        loss.backward()
-        optimizer.step()
+            loss, _ = criterion(rna_embeds, atac_embeds)
+            loss.backward()
+            optimizer.step()
 
     cleanup_ddp()
 
@@ -186,7 +182,7 @@ if __name__ == "__main__":
     parser.add_argument("--test_data", type=str, default="datasets/multiome/PBMC10k.h5mu")
     parser.add_argument("--logit_scale", type=float, default=1)
     parser.add_argument("--epoch_nums", type=int, default=80)
-    parser.add_argument("--results_dir", type=str, default='scmamba2_results')
+    parser.add_argument("--results_dir", type=str, default='results/ddp_results')
     parser.add_argument("--world_size", type=int, default=2, help="Number of GPUs for DDP")
     args = parser.parse_args()
 

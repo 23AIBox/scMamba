@@ -15,11 +15,12 @@ def clip_loss(similarity: torch.Tensor) -> torch.Tensor:
 
 
 class CLIPLoss(nn.Module):
-    def __init__(self, logit_scale=2.6592, requires_grad=False):
+    def __init__(self, logit_scale=2.6592, cos_simi_scale=1.0, requires_grad=False):
         super().__init__()
         self.logit_scale = nn.Parameter(
             torch.ones([]) * logit_scale, requires_grad=requires_grad
         )
+        self.cos_simi_scale = cos_simi_scale
         self.cos = nn.CosineSimilarity(dim=1, eps=1e-6)
     def forward(self, rna_embeds, atac_embeds):
 
@@ -31,6 +32,6 @@ class CLIPLoss(nn.Module):
         # cosin_similarity = F.cosine_similarity(rna_embeds, atac_embeds)
         cosin_similarity_loss = 1 - torch.mean(self.cos(rna_embeds, atac_embeds))
         # cosin_similarity_loss = cosin_similarity_loss * logit_scale
-        loss += (cosin_similarity_loss * 0.6)
+        loss += (cosin_similarity_loss * self.cos_simi_scale)
 
         return loss, logits_per_atac
