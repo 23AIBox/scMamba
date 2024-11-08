@@ -13,7 +13,6 @@ from torch import optim
 from tensorboardX import SummaryWriter
 
 from scmamba2.preprocess import Preprocessor, scATACseqPreprocessor
-# from scmamba2.dataset.data import MultiOmicsModule
 from scmamba2.dataset.dataset import MultiomeModule
 from scmamba2.models import MambaConfig, scMambaLMHeadModel
 from scmamba2.loss import CLIPLoss
@@ -23,7 +22,7 @@ from scmamba2.utils.metrics import (
 )
 from scmamba2 import logger
 
-torch.cuda.set_device("cuda:1")
+# torch.cuda.set_device("cuda:2")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="scMamba")
@@ -32,21 +31,21 @@ if __name__ == "__main__":
         "--checkpoint", type=str, 
         default=None
     )
-    parser.add_argument("--Retraining", type=bool, default=True)
+    parser.add_argument("--Retraining", type=bool, default=False)
     parser.add_argument("--device", type=str, default='cuda:1')
     parser.add_argument("--gpu_ids", type=list, default=[1])
 
     # DataModule
-    parser.add_argument("--batch_size", type=int, default=256)
+    parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--num_workers", type=int, default=0)
     parser.add_argument(
-        "--data_dir", type=str, default="datasets/multiome/downsample/PBMC10k.h5mu"
+        "--data_dir", type=str, default="datasets/multiome/PBMC10k.h5mu"
     )
     parser.add_argument("--backed", action="store_true", default=False)
-    parser.add_argument("--n_top_genes", type=int, default=20000)
+    parser.add_argument("--n_top_genes", type=int, default=10000)
     parser.add_argument("--n_top_peaks", type=int, default=20000)
-    parser.add_argument("--LSI", type=bool, default=False)
-    parser.add_argument("--PCA", type=bool, default=False)
+    parser.add_argument("--LSI", type=bool, default=True)
+    parser.add_argument("--PCA", type=bool, default=True)
     parser.add_argument("--mask", type=float, default=None)
 
     # Module
@@ -66,12 +65,12 @@ if __name__ == "__main__":
     )
     parser.add_argument("--fast_dev_run", action="store_true", default=False)
     parser.add_argument("--logit_scale", type=float, default=1)
-    parser.add_argument("--cos_simi_scale", type=float, default=0.5)
+    parser.add_argument("--cos_simi_scale", type=float, default=1)
     parser.add_argument("--epoch_nums", type=int, default=150)
     parser.add_argument("--results_dir", type=str, default='results')
     
     args = parser.parse_args()
-    # torch.cuda.set_device(args.device)
+    torch.cuda.set_device(args.device)
 
     np.random.seed(args.seed)
     os.environ['PYTHONHASHSEED'] = str(args.seed)
@@ -124,8 +123,18 @@ if __name__ == "__main__":
     preprocessor_atac(atac, batch_key=None)
     mdata.mod['atac'] = atac
     mu.pp.intersect_obs(mdata)
-    d_rna_feature = mdata.mod['rna'].X.shape[1]
-    d_atac_feature = mdata.mod['atac'].X.shape[1]
+    data_name = os.path.basename(args.data_dir).split('.')[0]
+    if args.PCA and args.LSI:
+        mdata['rna'].obsm['X_pca'] = \
+            np.load(f'datasets/multiome/{data_name}_pca_2500.npy')
+        
+        mdata['atac'].obsm['X_lsi'] = \
+            np.load(f'datasets/multiome/{data_name}_lsi_2500.npy')
+        d_rna_feature = mdata.mod['rna'].obsm['X_pca'].shape[1]
+        d_atac_feature = mdata.mod['atac'].obsm['X_lsi'].shape[1]
+    else:
+        d_rna_feature = mdata.mod['rna'].X.shape[1]
+        d_atac_feature = mdata.mod['atac'].X.shape[1]
 
     with open(args.config, 'r') as file:
         config = json.load(file)
@@ -133,8 +142,13 @@ if __name__ == "__main__":
 
     if args.checkpoint is None:
         dm = MultiomeModule(
-            mdata, "X_log1p", "X_binarized", 
-            batch_size=args.batch_size, num_workers=args.num_workers
+            mdata=mdata, 
+            use_layer1="X_log1p" if not args.PCA else "X_pca", 
+            use_layer2="X_binarized" if not args.LSI else "X_lsi", 
+            # use_layer1="X_pca", 
+            # use_layer2="X_lsi", 
+            batch_size=args.batch_size, 
+            num_workers=args.num_workers
         )
         model = scMambaLMHeadModel(
             config=config,
@@ -185,7 +199,9 @@ if __name__ == "__main__":
 
     elif args.Retraining:
         dm = MultiomeModule(
-            mdata, "X_log1p", "X_binarized",
+            mdata=mdata, 
+            use_layer1="X_log1p" if not args.PCA else "X_pca", 
+            use_layer2="X_binarized" if not args.LSI else "X_lsi", 
             batch_size=args.batch_size, num_workers=args.num_workers
         )
         model = scMambaLMHeadModel(
@@ -197,7 +213,7 @@ if __name__ == "__main__":
         ).to(device)
 
         criterion = CLIPLoss(
-            requires_grad=args.requires_grad, logit_scale=args.logit_scale
+            requires_grad=args.requires_grad, logit_scale=args.logit_scale, 
         )
         optimizer = optim.AdamW(
             model.parameters(), lr=args.lr, weight_decay=args.weight_decay
@@ -245,7 +261,9 @@ if __name__ == "__main__":
 
     else:
         dm = MultiomeModule(
-            mdata, "X_log1p", "X_binarized",
+            mdata=mdata, 
+            use_layer1="X_log1p" if not args.PCA else "X_pca", 
+            use_layer2="X_binarized" if not args.LSI else "X_lsi", 
             batch_size=args.batch_size, num_workers=args.num_workers
         )
         model = scMambaLMHeadModel(

@@ -23,15 +23,20 @@ class MultiomeDataset(Dataset):
         return self.mdata['rna'].X.shape[0]
     
     def __getitem__(self, index):
-        if self.use_layer1 != "X":
+        if self.use_layer1 == "X_pca":
+            x = self.mdata["rna"].obsm["X_pca"][index]
+        elif self.use_layer1 != "X":
             x = self.mdata["rna"].layers[self.use_layer1][index].toarray().squeeze()
         else:
             x = self.mdata["rna"].X[index].toarray().squeeze()
-
-        if self.use_layer2 != "X":
+        
+        if self.use_layer2 == "X_lsi":
+            y = self.mdata["atac"].obsm["X_lsi"][index]
+        elif self.use_layer2 != "X":
             y = self.mdata["atac"].layers[self.use_layer2][index].toarray().squeeze()
         else:
             y = self.mdata["atac"].X[index].toarray().squeeze()
+            
         return x, y
     
 class MultiomeModule():

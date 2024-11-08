@@ -42,6 +42,7 @@ def cleanup_ddp():
     dist.destroy_process_group()
 
 def main(rank, world_size, args):
+    # torch.cuda.set_device(rank)
     # dist.init_process_group("nccl")
     # rank = dist.get_rank()
     print(f"Start running basic DDP example on rank {rank}.")

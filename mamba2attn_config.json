@@ -9,9 +9,7 @@
     "attn_layer_idx": [
         2,
         4,
-        6,
-        8,
-        10
+        6
     ],
     "attn_cfg": {
         "causal": true,

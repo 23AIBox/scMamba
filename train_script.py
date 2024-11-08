@@ -13,7 +13,6 @@ from torch import optim
 from tensorboardX import SummaryWriter
 
 from scmamba2.preprocess import Preprocessor, scATACseqPreprocessor
-# from scmamba2.dataset.data import MultiOmicsModule
 from scmamba2.dataset.dataset import MultiomeModule
 from scmamba2.models import MambaConfig, scMambaLMHeadModel
 from scmamba2.loss import CLIPLoss
@@ -23,7 +22,7 @@ from scmamba2.utils.metrics import (
 )
 from scmamba2 import logger
 
-torch.cuda.set_device("cuda:2")
+# torch.cuda.set_device("cuda:1")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="scMamba")
@@ -33,18 +32,18 @@ if __name__ == "__main__":
         default=None
     )
     parser.add_argument("--Retraining", type=bool, default=True)
-    parser.add_argument("--device", type=str, default='cuda:2')
+    parser.add_argument("--device", type=str, default='cuda:4')
     parser.add_argument("--gpu_ids", type=list, default=[2])
 
     # DataModule
-    parser.add_argument("--batch_size", type=int, default=128)
+    parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--num_workers", type=int, default=0)
     parser.add_argument(
-        "--data_dir", type=str, default="datasets/multiome/fetal.h5mu"
+        "--data_dir", type=str, default="datasets/multiome/multiome_BMMC.h5mu"
     )
     parser.add_argument("--backed", action="store_true", default=False)
-    parser.add_argument("--n_top_genes", type=int, default=20000)
-    parser.add_argument("--n_top_peaks", type=int, default=40000)
+    parser.add_argument("--n_top_genes", type=int, default=10000)
+    parser.add_argument("--n_top_peaks", type=int, default=20000)
     parser.add_argument("--LSI", type=bool, default=False)
     parser.add_argument("--PCA", type=bool, default=False)
     parser.add_argument("--mask", type=float, default=None)
@@ -103,7 +102,7 @@ if __name__ == "__main__":
         binning=0,  # 6. whether to bin the raw data and to what number of bins
         result_binned_key="X_binned",  # the key in adata.layers to store the binned data
     )
-    preprocessor_rna(rna, batch_key=None)
+    preprocessor_rna(rna, batch_key="batch")
     mdata.mod['rna'] = rna
 
     # preprocess scATAC-seq dataset
@@ -120,7 +119,7 @@ if __name__ == "__main__":
         binning=0,  # 5. whether to bin the raw data and to what number of bins
         result_binned_key="X_binned",  # the key in adata.layers to store the binned data
     )
-    preprocessor_atac(atac, batch_key=None)
+    preprocessor_atac(atac, batch_key="batch")
     mdata.mod['atac'] = atac
     mu.pp.intersect_obs(mdata)
     d_rna_feature = mdata.mod['rna'].X.shape[1]

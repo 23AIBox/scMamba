@@ -382,14 +382,17 @@ class scMambaLMHeadModel(nn.Module, GenerationMixin):
         d_feature_omics1: int,
         d_feature_omics2: int,
         patch_size: int,
+        multi_batches: bool=False,
         initializer_cfg=None,
         device=None,
         dtype=None,
     ) -> None:
         self.config = config
-        n_layer = config.n_layer
-
+        self.multi_batches = multi_batches
         super().__init__()
+
+        self.batch_norm_omics1 = nn.BatchNorm1d(num_features=d_feature_omics1)
+        self.batch_norm_omics2 = nn.BatchNorm1d(num_features=d_feature_omics2)
         
         self.encoder_omics1 = MambaLMHeadModel(
             config=config, d_feature=d_feature_omics1, patch_size=patch_size, device=device
@@ -398,7 +401,6 @@ class scMambaLMHeadModel(nn.Module, GenerationMixin):
         self.encoder_omics2 = MambaLMHeadModel(
             config=config, d_feature=d_feature_omics2, patch_size=patch_size, device=device
         )
-
         # Initialize weights and apply final processing
         # self.apply(
         #     partial(
@@ -416,7 +418,10 @@ class scMambaLMHeadModel(nn.Module, GenerationMixin):
         "position_ids" is just to be compatible with Transformer generation. We don't use it.
         num_last_tokens: if > 0, only return the logits for the last n tokens
         """
-        # print(torch.sum(input_ids_omics_1, dim=1))
+        input_ids_omics_1 = input_ids_omics_1 if not self.multi_batches \
+            else self.batch_norm_omics1(input_ids_omics_1)
+        input_ids_omics_2 = input_ids_omics_2 if not self.multi_batches \
+            else self.batch_norm_omics2(input_ids_omics_2)
         lm_logits_omics1 = self.encoder_omics1(input_ids_omics_1, inference_params=inference_params, num_last_tokens=num_last_tokens, pool=pool, normalize=normalize, **mixer_kwargs)
         lm_logits_omics2 = self.encoder_omics2(input_ids_omics_2, inference_params=inference_params, num_last_tokens=num_last_tokens, pool=pool, normalize=normalize, **mixer_kwargs)
         # lm_logits_omics1, lm_logits_omics2 = torch.squeeze(lm_logits_omics1, 1), torch.squeeze(lm_logits_omics2, 1)

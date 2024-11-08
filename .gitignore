@@ -8,4 +8,7 @@ scmamba2/tokenizer/__pycache__/*
 scmamba2/utils/__pycache__/*
 *log*
 tutorials/results/*
-
+inference.py
+run_single.sh
+train_accelerate.py
+train_deepspeed.py
