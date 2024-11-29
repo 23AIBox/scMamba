@@ -22,7 +22,7 @@ from scmamba2.utils.metrics import (
 )
 from scmamba2 import logger
 
-# torch.cuda.set_device("cuda:1")
+# torch.cuda.set_device("cuda:6")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="scMamba")
@@ -32,18 +32,18 @@ if __name__ == "__main__":
         default=None
     )
     parser.add_argument("--Retraining", type=bool, default=True)
-    parser.add_argument("--device", type=str, default='cuda:4')
+    parser.add_argument("--device", type=str, default='cuda:0')
     parser.add_argument("--gpu_ids", type=list, default=[2])
 
     # DataModule
     parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--num_workers", type=int, default=0)
     parser.add_argument(
-        "--data_dir", type=str, default="datasets/multiome/multiome_BMMC.h5mu"
+        "--data_dir", type=str, default="datasets/multiome/fetal.h5mu"
     )
     parser.add_argument("--backed", action="store_true", default=False)
-    parser.add_argument("--n_top_genes", type=int, default=10000)
-    parser.add_argument("--n_top_peaks", type=int, default=20000)
+    parser.add_argument("--n_top_genes", type=int, default=30000)
+    parser.add_argument("--n_top_peaks", type=int, default=60000)
     parser.add_argument("--LSI", type=bool, default=False)
     parser.add_argument("--PCA", type=bool, default=False)
     parser.add_argument("--mask", type=float, default=None)
@@ -61,7 +61,7 @@ if __name__ == "__main__":
         "--normalize", action="store_true", default=True
     )
     parser.add_argument(
-        "--multi_batches", action="store_true", default=False
+        "--multi_batches", action="store_true", default=True
     )
     parser.add_argument("--fast_dev_run", action="store_true", default=False)
     parser.add_argument("--logit_scale", type=float, default=1)
@@ -139,6 +139,7 @@ if __name__ == "__main__":
             d_feature_omics1=d_rna_feature,
             d_feature_omics2=d_atac_feature,
             patch_size=256,
+            multi_batches=args.multi_batches,
             device=device
         ).to(device)
         
@@ -191,6 +192,7 @@ if __name__ == "__main__":
             d_feature_omics1=d_rna_feature,
             d_feature_omics2=d_atac_feature,
             patch_size=256,
+            multi_batches=args.multi_batches,
             device=device
         ).to(device)
 
@@ -251,6 +253,7 @@ if __name__ == "__main__":
             d_feature_omics1=d_rna_feature,
             d_feature_omics2=d_atac_feature,
             patch_size=256,
+            multi_batches=args.multi_batches,
             device=device
         ).to(device)
 
@@ -281,7 +284,7 @@ if __name__ == "__main__":
                 device=device,
                 n_neighbors=30, 
                 metric='cosine', 
-                min_dist=0.3, 
+                min_dist=0.5, 
                 resolution=0.3
             )
             metrics = {}

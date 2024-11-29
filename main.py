@@ -31,25 +31,25 @@ if __name__ == "__main__":
         "--checkpoint", type=str, 
         default=None
     )
-    parser.add_argument("--Retraining", type=bool, default=False)
+    parser.add_argument("--Retraining", type=bool, default=True)
     parser.add_argument("--device", type=str, default='cuda:1')
     parser.add_argument("--gpu_ids", type=list, default=[1])
 
     # DataModule
-    parser.add_argument("--batch_size", type=int, default=128)
+    parser.add_argument("--batch_size", type=int, default=256)
     parser.add_argument("--num_workers", type=int, default=0)
     parser.add_argument(
-        "--data_dir", type=str, default="datasets/multiome/PBMC10k.h5mu"
+        "--data_dir", type=str, default="datasets/multiome/multiome_BMMC.h5mu"
     )
     parser.add_argument("--backed", action="store_true", default=False)
     parser.add_argument("--n_top_genes", type=int, default=10000)
     parser.add_argument("--n_top_peaks", type=int, default=20000)
-    parser.add_argument("--LSI", type=bool, default=True)
-    parser.add_argument("--PCA", type=bool, default=True)
+    parser.add_argument("--LSI", type=bool, default=False)
+    parser.add_argument("--PCA", type=bool, default=False)
     parser.add_argument("--mask", type=float, default=None)
 
     # Module
-    parser.add_argument("--config", type=str, default="mamba2_config.json")
+    parser.add_argument("--config", type=str, default="mamba2attn_config.json")
     parser.add_argument("--lr", type=float, default=1.5e-4)
     parser.add_argument("--weight_decay", type=float, default=0.05)
     parser.add_argument("--dropout", type=float, default=0.1)
@@ -61,7 +61,7 @@ if __name__ == "__main__":
         "--normalize", action="store_true", default=True
     )
     parser.add_argument(
-        "--multi_batches", action="store_true", default=False
+        "--multi_batches", action="store_true", default=True
     )
     parser.add_argument("--fast_dev_run", action="store_true", default=False)
     parser.add_argument("--logit_scale", type=float, default=1)
@@ -103,7 +103,7 @@ if __name__ == "__main__":
         binning=0,  # 6. whether to bin the raw data and to what number of bins
         result_binned_key="X_binned",  # the key in adata.layers to store the binned data
     )
-    preprocessor_rna(rna, batch_key=None)
+    preprocessor_rna(rna, batch_key=None if not args.multi_batches else 'batch')
     mdata.mod['rna'] = rna
 
     # preprocess scATAC-seq dataset
@@ -120,7 +120,7 @@ if __name__ == "__main__":
         binning=0,  # 5. whether to bin the raw data and to what number of bins
         result_binned_key="X_binned",  # the key in adata.layers to store the binned data
     )
-    preprocessor_atac(atac, batch_key=None)
+    preprocessor_atac(atac, batch_key=None if not args.multi_batches else 'batch')
     mdata.mod['atac'] = atac
     mu.pp.intersect_obs(mdata)
     data_name = os.path.basename(args.data_dir).split('.')[0]
@@ -155,6 +155,7 @@ if __name__ == "__main__":
             d_feature_omics1=d_rna_feature,
             d_feature_omics2=d_atac_feature,
             patch_size=256,
+            multi_batches=args.multi_batches,
             device=device
         ).to(device)
         
@@ -209,6 +210,7 @@ if __name__ == "__main__":
             d_feature_omics1=d_rna_feature,
             d_feature_omics2=d_atac_feature,
             patch_size=256,
+            multi_batches=args.multi_batches,
             device=device
         ).to(device)
 
@@ -271,6 +273,7 @@ if __name__ == "__main__":
             d_feature_omics1=d_rna_feature,
             d_feature_omics2=d_atac_feature,
             patch_size=256,
+            multi_batches=args.multi_batches,
             device=device
         ).to(device)
 

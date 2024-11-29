@@ -61,18 +61,18 @@ def plot_paired_umap(
         sc.tl.umap(adata, min_dist=min_dist, spread=1.0)
         sc.tl.leiden(adata, resolution=resolution, flavor="igraph", n_iterations=2)
     
-    ncols, nrows, figsize, wspace = 2, 2, 4, 0.5
+    ncols, nrows, figsize, wspace = 2, 1, 4, 0.5
     fig, axs = plt.subplots(
         nrows=nrows,
         ncols=ncols,
         figsize=(ncols * figsize + figsize * wspace * (ncols - 1), nrows * figsize),
     )
     plt.subplots_adjust(wspace=wspace)
-    sc.pl.umap(adata, color=color[0], ax=axs[0, 0], show=False, wspace=0.65, ncols=4)
-    sc.pl.umap(adata, color=color[1], ax=axs[0, 1], show=False, wspace=0.65, ncols=4)
+    sc.pl.umap(adata, color=color[0], ax=axs[0], show=False, wspace=0.65, ncols=4)
+    sc.pl.umap(adata, color=color[1], ax=axs[1], show=False, wspace=0.65, ncols=4)
 
-    axs[1, 0].axis('off')
-    sc.pl.umap(adata, color='leiden', ax=axs[1, 1], show=False, wspace=0.65, ncols=4)
+    # axs[1, 0].axis('off')
+    # sc.pl.umap(adata, color='leiden', ax=axs[1, 1], show=False, wspace=0.65, ncols=4)
     # legend = axs[1].get_legend()
     # legend.set_bbox_to_anchor((-1.53, -0.8))
     # legend.set_ncols(16)

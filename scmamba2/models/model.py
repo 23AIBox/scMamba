@@ -230,6 +230,8 @@ class MambaLMHeadModel(nn.Module, GenerationMixin):
         config: MambaConfig,
         d_feature: int,
         patch_size: int,
+        normalize: bool=False,
+        pool: str='last token',
         initializer_cfg=None,
         device=None,
         dtype=None,
@@ -248,9 +250,12 @@ class MambaLMHeadModel(nn.Module, GenerationMixin):
         pad_vocab_size_multiple = config.pad_vocab_size_multiple
         factory_kwargs = {"device": device, "dtype": dtype}
 
+        self.normalize = normalize
+        self.pool = pool
+
         super().__init__()
-        if vocab_size % pad_vocab_size_multiple != 0:
-            vocab_size += pad_vocab_size_multiple - (vocab_size % pad_vocab_size_multiple)
+        # if vocab_size % pad_vocab_size_multiple != 0:
+        #     vocab_size += pad_vocab_size_multiple - (vocab_size % pad_vocab_size_multiple)
         self.backbone = MixerModel(
             d_model=d_model,
             n_layer=n_layer,
@@ -289,16 +294,18 @@ class MambaLMHeadModel(nn.Module, GenerationMixin):
         num_last_tokens: if > 0, only return the logits for the last n tokens
         """
         hidden_states = self.backbone(input_ids, inference_params=inference_params, **mixer_kwargs)
-        if pool == 'mean':
+        if self.pool == 'mean':
             hidden_states = hidden_states.mean(dim=1)
-        elif pool == 'last token':
-            hidden_states = hidden_states[:, -1] 
+        elif self.pool == 'last token':
+            hidden_states = hidden_states[:, -1]
+        elif self.pool == 'first token':
+            hidden_states = hidden_states[:, 0]
         # if num_last_tokens > 0:
         #     hidden_states = hidden_states[:, -num_last_tokens:]
+        if self.normalize:
+            hidden_states = hidden_states / torch.linalg.norm(hidden_states, ord=2, dim=-1, keepdim=True)
         hidden_states = self.active(hidden_states)
         lm_logits = self.lm_head(hidden_states)
-        if normalize:
-            lm_logits = lm_logits / torch.linalg.norm(lm_logits, ord=2, dim=-1, keepdim=True)
         return lm_logits
 
     def get_representaion(
@@ -383,23 +390,25 @@ class scMambaLMHeadModel(nn.Module, GenerationMixin):
         d_feature_omics2: int,
         patch_size: int,
         multi_batches: bool=False,
+        normalize: bool=False,
+        pool: str='last token',
         initializer_cfg=None,
         device=None,
         dtype=None,
     ) -> None:
         self.config = config
         self.multi_batches = multi_batches
-        super().__init__()
 
-        self.batch_norm_omics1 = nn.BatchNorm1d(num_features=d_feature_omics1)
-        self.batch_norm_omics2 = nn.BatchNorm1d(num_features=d_feature_omics2)
-        
+        super().__init__()
+        if self.multi_batches:
+            self.batch_norm_omics1 = nn.BatchNorm1d(num_features=d_feature_omics1)
+            self.batch_norm_omics2 = nn.BatchNorm1d(num_features=d_feature_omics2)     
         self.encoder_omics1 = MambaLMHeadModel(
-            config=config, d_feature=d_feature_omics1, patch_size=patch_size, device=device
+            config=config, d_feature=d_feature_omics1, patch_size=patch_size, device=device, pool=pool, normalize=normalize
         )
         
         self.encoder_omics2 = MambaLMHeadModel(
-            config=config, d_feature=d_feature_omics2, patch_size=patch_size, device=device
+            config=config, d_feature=d_feature_omics2, patch_size=patch_size, device=device, pool=pool, normalize=normalize
         )
         # Initialize weights and apply final processing
         # self.apply(
@@ -418,13 +427,13 @@ class scMambaLMHeadModel(nn.Module, GenerationMixin):
         "position_ids" is just to be compatible with Transformer generation. We don't use it.
         num_last_tokens: if > 0, only return the logits for the last n tokens
         """
-        input_ids_omics_1 = input_ids_omics_1 if not self.multi_batches \
-            else self.batch_norm_omics1(input_ids_omics_1)
-        input_ids_omics_2 = input_ids_omics_2 if not self.multi_batches \
-            else self.batch_norm_omics2(input_ids_omics_2)
+        if self.multi_batches:
+            input_ids_omics_1 = self.batch_norm_omics1(input_ids_omics_1)
+            input_ids_omics_2 = self.batch_norm_omics2(input_ids_omics_2)
+        
         lm_logits_omics1 = self.encoder_omics1(input_ids_omics_1, inference_params=inference_params, num_last_tokens=num_last_tokens, pool=pool, normalize=normalize, **mixer_kwargs)
         lm_logits_omics2 = self.encoder_omics2(input_ids_omics_2, inference_params=inference_params, num_last_tokens=num_last_tokens, pool=pool, normalize=normalize, **mixer_kwargs)
-        # lm_logits_omics1, lm_logits_omics2 = torch.squeeze(lm_logits_omics1, 1), torch.squeeze(lm_logits_omics2, 1)
+
         CausalLMOutput = namedtuple("CausalLMOutput", ["logits_omics_1", "logits_omics_2"])
         return CausalLMOutput(logits_omics_1=lm_logits_omics1, logits_omics_2=lm_logits_omics2)
     

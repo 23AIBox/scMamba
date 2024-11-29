@@ -22,9 +22,28 @@ which python
 # - NCCL_SOCKET_IFNAME. to find the proper value, using command line: `ip addr`
 # - NCCL_IB_DISABLE. if the network-interface is not InfiniBand, set NCCL_IB_DISABLE=1
 export NCCL_SOCKET_IFNAME="lo"    # `lo` refers to loopback interface which applies to single machine
-export NCCL_IB_DISABLE=1        # 禁用了NCCL的InfiniBand，which是一种高性能网络通信协议，适合在多节点集群中使用
+export NCCL_IB_DISABLE=1        # disable IB communication
+export NCCL_P2P_DISABLE=1       # disable P2P communication
 
 unset CUDA_VISIBLE_DEVICES
 export PORT=$(python -Bu get_tcp_port.py 2>/dev/null | grep 'Distributed TCP PORT' | awk -F'|' '{print $2}' | xargs -n1 echo | head -n1)
-deepspeed --include localhost:"1, 2"  --master_port "$PORT" train_dp.py --deepspeed
-# notice: modified localhost:"0,1" to proper GPU ID.
+
+CUDA_VISIBLE_DEVICES=3 accelerate launch --num_processes=1 \
+    --config_file config_files/accelerate_config.yaml --main_process_port $PORT \
+    train_accelerate_rna_adt.py \
+        --batch_size 128 \
+        --data_dir datasets/multiome/cite_BMMC_s1s4_500.h5mu \
+        --n_top_genes 10000 \
+        --config config_files/mamba2_config.json \
+        --epoch_nums 80 \
+        --results_dir results 
+
+python inference_rna_adt.py \
+    --checkpoints results/cite_BMMC_s1s4_500batchsize128projection_dim64/checkpoints/scMamba.pt \
+    --device cuda:3 \
+    --batch_size 128 \
+    --data_dir datasets/multiome/cite_BMMC_s1s4_500.h5mu \
+    --n_top_genes 10000 \
+    --config config_files/mamba2_config.json \
+    --epoch_nums 80 \
+    --results_dir results 

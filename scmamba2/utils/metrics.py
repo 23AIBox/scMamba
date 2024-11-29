@@ -175,8 +175,8 @@ def omics_mixing(
     with threadpool_limits(limits=num_threads):
         BEM_score = batch_entropy_mixing_score(adata.obsm['X_umap'], adata.obs['modality'])
         SAS = seurat_alignment_score(adata.obsm['X_umap'], modality)
-        GC = graph_connectivity(adata.X, cell_type)
-        ASW_omics = avg_silhouette_width_omics(adata.X, modality, cell_type)
+        GC = graph_connectivity(adata.obsm['X_umap'], cell_type)
+        ASW_omics = avg_silhouette_width_omics(adata.obsm['X_umap'], modality, cell_type)
 
     return {
         "omics entropy mixing score": float(BEM_score),

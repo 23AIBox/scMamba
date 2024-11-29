@@ -35,7 +35,7 @@ from scmamba2 import logger
 def get_deepspeed_config():
     return {
         # "train_batch_size": 255,
-        "train_micro_batch_size_per_gpu": 256,
+        "train_micro_batch_size_per_gpu": 128,
         "gradient_accumulation_steps": 1,
         "gradient_clipping": 1.0,
         "steps_per_print": 10,
@@ -63,7 +63,7 @@ def get_deepspeed_config():
             "min_loss_scale": 1
         },        
         "zero_optimization": {
-            "stage": 2,
+            "stage": 3,
         },
         "comms_logger": {
             "enabled": True,
@@ -135,7 +135,7 @@ def main(args):
         d_feature_omics1=d_rna_feature,
         d_feature_omics2=d_atac_feature,
         patch_size=256,
-        multi_batches=True
+        multi_batches=args.multi_batches
     )
     # Loss and optimizer
     criterion = CLIPLoss(
@@ -277,18 +277,18 @@ if __name__ == "__main__":
     parser.add_argument("--epoch_nums", type=int, default=150)
     parser.add_argument("--num_workers", type=int, default=0)
     parser.add_argument("--data_dir", type=str, default="datasets/multiome/multiome_BMMC.h5mu")
-    parser.add_argument("--n_top_genes", type=int, default=10000)
-    parser.add_argument("--n_top_peaks", type=int, default=20000)
+    parser.add_argument("--n_top_genes", type=int, default=20000)
+    parser.add_argument("--n_top_peaks", type=int, default=40000)
     
     # Module
-    parser.add_argument("--config", type=str, default="mamba2_config.json")
+    parser.add_argument("--config", type=str, default="mamba2attn_config.json")
     parser.add_argument("--lr", type=float, default=1.5e-4)
     parser.add_argument("--weight_decay", type=float, default=0.05)
     parser.add_argument("--dropout", type=float, default=0.1)
     parser.add_argument("--hidden_dropout_prob", type=float, default=0.1)
     parser.add_argument("--requires_grad", action="store_true", default=True)
     parser.add_argument("--normalize", action="store_true", default=True)
-    parser.add_argument("--multi_batches", action="store_true", default=False)
+    parser.add_argument("--multi_batches", action="store_true", default=True)
     parser.add_argument("--logit_scale", type=float, default=1)
     parser.add_argument('--local_rank', type=int, default=-1,
                         help='local rank passed from distributed launcher')    

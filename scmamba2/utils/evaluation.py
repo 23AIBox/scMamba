@@ -29,7 +29,7 @@ def maxARI(
 ):
     max_res = 0
     max_ARI = 0
-    for res in range(1, 11):
+    for res in range(1, 21):
         res = res/10.0
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=UserWarning)

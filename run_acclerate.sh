@@ -22,9 +22,30 @@ which python
 # - NCCL_SOCKET_IFNAME. to find the proper value, using command line: `ip addr`
 # - NCCL_IB_DISABLE. if the network-interface is not InfiniBand, set NCCL_IB_DISABLE=1
 export NCCL_SOCKET_IFNAME="lo"    # `lo` refers to loopback interface which applies to single machine
-export NCCL_IB_DISABLE=1        # 禁用了NCCL的InfiniBand，which是一种高性能网络通信协议，适合在多节点集群中使用
+export NCCL_IB_DISABLE=1        # disable IB communication
+export NCCL_P2P_DISABLE=1       # disable P2P communication
 
 unset CUDA_VISIBLE_DEVICES
 export PORT=$(python -Bu get_tcp_port.py 2>/dev/null | grep 'Distributed TCP PORT' | awk -F'|' '{print $2}' | xargs -n1 echo | head -n1)
-deepspeed --include localhost:"1, 2"  --master_port "$PORT" train_dp.py --deepspeed
-# notice: modified localhost:"0,1" to proper GPU ID.
+
+CUDA_VISIBLE_DEVICES=3,5 accelerate launch --num_processes=2 \
+    --config_file config_files/accelerate_config.yaml \
+    train_accelerate.py \
+        --batch_size 64 \
+        --data_dir datasets/multiome/fetal.h5mu \
+        --n_top_genes 20480 \
+        --n_top_peaks 40960 \
+        --config config_files/mamba2_config.json \
+        --epoch_nums 100 \
+        --results_dir results     
+
+python inference_accelerate.py \
+    --device cuda:3 \
+    --checkpoints results/fetalbatchsize64projection_dim32/checkpoints/scMamba.pt \
+    --batch_size 64 \
+    --data_dir datasets/multiome/fetal.h5mu \
+    --n_top_genes 20480 \
+    --n_top_peaks 40960 \
+    --config config_files/mamba2_config.json \
+    --epoch_nums 100 \
+    --results_dir results  
