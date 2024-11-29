@@ -13,3 +13,6 @@ inference.py
 run_single.sh
 train_deepspeed.py
 run_acclerate2.sh
+datasets.txt
+goldendatasets.txt
+train_ddp.py

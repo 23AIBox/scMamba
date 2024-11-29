@@ -1,6 +1,0 @@
-datasets/multiome/downsample/genes_PBMC10k25.h5mu
-datasets/multiome/downsample/genes_PBMC10k50.h5mu
-datasets/multiome/downsample/genes_PBMC10k75.h5mu
-datasets/multiome/downsample/peaks_PBMC10k25.h5mu
-datasets/multiome/downsample/peaks_PBMC10k50.h5mu
-datasets/multiome/downsample/peaks_PBMC10k75.h5mu
