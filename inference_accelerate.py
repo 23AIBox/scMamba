@@ -57,7 +57,7 @@ def main(args):
         subset_hvg=args.n_top_genes,
         hvg_use_key=None,
         hvg_flavor="seurat_v3",
-        binning=0,
+        binning=args.binning,
         result_binned_key="X_binned",
     )
     preprocessor_rna(rna, batch_key=None)
@@ -171,6 +171,7 @@ if __name__ == "__main__":
     parser.add_argument("--data_dir", type=str, default="datasets/multiome/fetal.h5mu")
     parser.add_argument("--n_top_genes", type=int, default=20000)
     parser.add_argument("--n_top_peaks", type=int, default=40000)
+    parser.add_argument("--binning", type=int, default=0)
     parser.add_argument("--config", type=str, default="config_files/mamba2_config.json")
     parser.add_argument("--lr", type=float, default=5e-4)
     parser.add_argument("--weight_decay", type=float, default=0.05)

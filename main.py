@@ -155,7 +155,6 @@ if __name__ == "__main__":
             d_feature_omics1=d_rna_feature,
             d_feature_omics2=d_atac_feature,
             patch_size=256,
-            multi_batches=args.multi_batches,
             device=device
         ).to(device)
         
@@ -210,7 +209,6 @@ if __name__ == "__main__":
             d_feature_omics1=d_rna_feature,
             d_feature_omics2=d_atac_feature,
             patch_size=256,
-            multi_batches=args.multi_batches,
             device=device
         ).to(device)
 
@@ -273,7 +271,6 @@ if __name__ == "__main__":
             d_feature_omics1=d_rna_feature,
             d_feature_omics2=d_atac_feature,
             patch_size=256,
-            multi_batches=args.multi_batches,
             device=device
         ).to(device)
 
@@ -325,13 +322,6 @@ if __name__ == "__main__":
 
             metrics['epcohs'] = finally_epoch
             metrics['best resolutioin'] = best_res
-            # metrics['mean F1 silhouette'] = mean_F1_silhouette(
-            #     concate_embeds.X, 
-            #     cell_type=concate_embeds.obs['cell_type'].values,
-            #     omics=concate_embeds.obs['modality'].values,
-            #     device_id=args.device,
-            #     chunk_size=100000
-            # )
             print(metrics)
 
             if not os.path.exists(f'{out_dir}/metrics.csv'):

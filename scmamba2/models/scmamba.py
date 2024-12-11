@@ -32,6 +32,7 @@ except ImportError:
     RMSNorm, layer_norm_fn, rms_norm_fn = None, None, None
 
 from ..tokenizer.tokenizer import scEmbeddings
+from .config_scmamba import scMambaConfig
 from ..utils.plot import plot_umap, plot_paired_umap
 from .. import logger
 
@@ -227,9 +228,8 @@ class MambaLMHeadModel(nn.Module, GenerationMixin):
 
     def __init__(
         self,
-        config: MambaConfig,
+        config: scMambaConfig,
         d_feature: int,
-        patch_size: int,
         normalize: bool=False,
         pool: str='last token',
         initializer_cfg=None,
@@ -238,6 +238,7 @@ class MambaLMHeadModel(nn.Module, GenerationMixin):
     ) -> None:
         self.config = config
         d_model = config.d_model
+        patch_size = config.patch_size
         n_layer = config.n_layer
         d_intermediate = config.d_intermediate
         vocab_size = config.vocab_size
@@ -359,7 +360,7 @@ class MambaLMHeadModel(nn.Module, GenerationMixin):
     @classmethod
     def from_pretrained(cls, pretrained_model_name, device=None, dtype=None, **kwargs):
         config_data = load_config_hf(pretrained_model_name)
-        config = MambaConfig(**config_data)
+        config = scMambaConfig(**config_data)
         model = cls(config, device=device, dtype=dtype, **kwargs)
         model.load_state_dict(load_state_dict_hf(pretrained_model_name, device=device, dtype=dtype))
         return model
@@ -381,29 +382,30 @@ class MambaLMHeadModel(nn.Module, GenerationMixin):
         with open(config_path, 'w') as f:
             json.dump(self.config.__dict__, f, indent=4)
 
+
 class scMambaLMHeadModel(nn.Module, GenerationMixin):
 
     def __init__(
         self,
-        config: MambaConfig,
+        # config: MambaConfig,
+        config_omics1: scMambaConfig,
+        config_omics2: scMambaConfig,
         d_feature_omics1: int,
         d_feature_omics2: int,
-        patch_size: int,
         normalize: bool=False,
         pool: str='last token',
         initializer_cfg=None,
         device=None,
         dtype=None,
     ) -> None:
-        self.config = config
-
+        # self.config = config
         super().__init__()
-        self.encoder_omics1 = MambaLMHeadModel(
-            config=config, d_feature=d_feature_omics1, patch_size=patch_size, device=device, pool=pool, normalize=normalize
+        self.decoder_omics1 = MambaLMHeadModel(
+            config=config_omics1, d_feature=d_feature_omics1, device=device, pool=pool, normalize=normalize
         )
         
-        self.encoder_omics2 = MambaLMHeadModel(
-            config=config, d_feature=d_feature_omics2, patch_size=patch_size, device=device, pool=pool, normalize=normalize
+        self.decoder_omics2 = MambaLMHeadModel(
+            config=config_omics2, d_feature=d_feature_omics2, device=device, pool=pool, normalize=normalize
         )
 
     def allocate_inference_cache(self, batch_size, max_seqlen, dtype=None, **kwargs):
@@ -415,8 +417,8 @@ class scMambaLMHeadModel(nn.Module, GenerationMixin):
         num_last_tokens: if > 0, only return the logits for the last n tokens
         """
         
-        lm_logits_omics1 = self.encoder_omics1(input_ids_omics_1, inference_params=inference_params, num_last_tokens=num_last_tokens, pool=pool, normalize=normalize, **mixer_kwargs)
-        lm_logits_omics2 = self.encoder_omics2(input_ids_omics_2, inference_params=inference_params, num_last_tokens=num_last_tokens, pool=pool, normalize=normalize, **mixer_kwargs)
+        lm_logits_omics1 = self.decoder_omics1(input_ids_omics_1, inference_params=inference_params, num_last_tokens=num_last_tokens, pool=pool, normalize=normalize, **mixer_kwargs)
+        lm_logits_omics2 = self.decoder_omics2(input_ids_omics_2, inference_params=inference_params, num_last_tokens=num_last_tokens, pool=pool, normalize=normalize, **mixer_kwargs)
 
         CausalLMOutput = namedtuple("CausalLMOutput", ["logits_omics_1", "logits_omics_2"])
         return CausalLMOutput(logits_omics_1=lm_logits_omics1, logits_omics_2=lm_logits_omics2)
@@ -435,11 +437,11 @@ class scMambaLMHeadModel(nn.Module, GenerationMixin):
         ):
         if dataloader is not None:
             # get rna embeddings and atac embeddings
-            rna_emb = self.encoder_omics1.get_representaion(
+            rna_emb = self.decoder_omics1.get_representaion(
                 dataloader, cell_type=cell_type, modality="rna", out_dir=out_dir, device=device,
                 n_neighbors=n_neighbors, metric=metric, min_dist=min_dist, resolution=resolution
             )
-            atac_emb = self.encoder_omics2.get_representaion(
+            atac_emb = self.decoder_omics2.get_representaion(
                 dataloader, cell_type=cell_type, modality="atac", out_dir=out_dir, device=device,
                 n_neighbors=n_neighbors, metric=metric, min_dist=min_dist, resolution=resolution
             )          
@@ -464,7 +466,7 @@ class scMambaLMHeadModel(nn.Module, GenerationMixin):
     @classmethod
     def from_pretrained(cls, pretrained_model_name, device=None, dtype=None, **kwargs):
         config_data = load_config_hf(pretrained_model_name)
-        config = MambaConfig(**config_data)
+        config = scMambaConfig(**config_data)
         model = cls(config, device=device, dtype=dtype, **kwargs)
         model.load_state_dict(load_state_dict_hf(pretrained_model_name, device=device, dtype=dtype))
         return model

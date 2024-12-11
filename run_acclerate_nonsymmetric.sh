@@ -28,24 +28,28 @@ export NCCL_P2P_DISABLE=1       # disable P2P communication
 unset CUDA_VISIBLE_DEVICES
 export PORT=$(python -Bu get_tcp_port.py 2>/dev/null | grep 'Distributed TCP PORT' | awk -F'|' '{print $2}' | xargs -n1 echo | head -n1)
 
-CUDA_VISIBLE_DEVICES=0,1 accelerate launch --num_processes=2 \
-    --config_file config_files/accelerate_config.yaml --main_process_port $PORT \
-    train_accelerate_rna_adt.py \
-        --batch_size 64 \
-        --data_dir datasets/multiome/cite_BMMC_s1_500.h5mu \
-        --batch_key batch \
-        --n_top_genes 10000 \
-        --config config_files/mamba2_config.json \
-        --epoch_nums 80 \
-        --results_dir results 
+rm -rf results/nonsymmetric/PBMC10k_sortby_chrombatchsize64projection_dim64/checkpoints
 
-python inference_rna_adt.py \
-    --checkpoints results/cite_BMMC_s1_500batchsize64projection_dim64/checkpoints/scMamba.pt \
-    --device cuda:1 \
+CUDA_VISIBLE_DEVICES=7 accelerate launch --num_processes=1 \
+    --config_file config_files/accelerate_config.yaml --main_process_port $PORT \
+    train_accelerate_nonsysmmetric.py \
+        --batch_size 64 \
+        --data_dir datasets/multiome/PBMC10k_sortby_chrom.h5mu \
+        --n_top_genes 20480 \
+        --n_top_peaks 40960 \
+        --binning 0 \
+        --config config_files/scmamba2attn_config.json \
+        --epoch_nums 80 \
+        --results_dir results/nonsymmetric
+
+python inference_accelerate_nonsysmmetric.py \
+    --device cuda:7 \
+    --checkpoints results/nonsymmetric/PBMC10k_sortby_chrombatchsize64projection_dim64/checkpoints/scMamba.pt \
     --batch_size 64 \
-    --data_dir datasets/multiome/cite_BMMC_s1_500.h5mu \
-    --batch_key batch \
-    --n_top_genes 10000 \
-    --config config_files/mamba2_config.json \
+    --data_dir datasets/multiome/PBMC10k_sortby_chrom.h5mu \
+    --n_top_genes 20480 \
+    --n_top_peaks 40960 \
+    --binning 0 \
+    --config config_files/scmamba2attn_config.json \
     --epoch_nums 80 \
-    --results_dir results 
+    --results_dir results/nonsymmetric  

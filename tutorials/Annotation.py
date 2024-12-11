@@ -163,14 +163,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--data_dir", 
         type=str, 
-        default="results/cite_BMMC_test_500batchsize128projection_dim50/concat.h5ad"
+        default="results/cite_BMMC_s1_500batchsize128projection_dim64/concat.h5ad"
     )
     parser.add_argument("--lr", type=float, default='1e-4')
     parser.add_argument("--batch_size", type=int, default=64)
     parser.add_argument("--epochs", type=int, default=50)
     # s1d1 is the training batch for s1, s4d9 is training batch for s4
-    parser.add_argument("--train_batches", type=list, default=['s4d9'])
-    parser.add_argument("--results_path", type=str, default='results/annotation/cite_BMMC_s1_500')
+    parser.add_argument("--train_batches", type=list, default=['s1d1'])
+    parser.add_argument("--results_path", type=str, default='results/annotation/cite_BMMC_s1_500_2')
 
     args = parser.parse_args()
     main(args)

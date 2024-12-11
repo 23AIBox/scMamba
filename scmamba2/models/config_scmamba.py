@@ -2,9 +2,10 @@ from dataclasses import dataclass, field
 
 
 @dataclass
-class MambaConfig:
+class scMambaConfig:
 
     d_model: int = 2560
+    patch_size: int = 256
     d_intermediate: int = 0
     n_layer: int = 64
     vocab_size: int = 50277
