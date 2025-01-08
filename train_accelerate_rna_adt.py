@@ -21,8 +21,10 @@ from tensorboardX import SummaryWriter
 
 from scmamba2.preprocess import Preprocessor, scATACseqPreprocessor
 from scmamba2.dataset.dataset import MultiomeModule, MultiomeDataset
-from scmamba2.models import MambaLMHeadModel, MambaConfig, scMambaLMHeadModel
-from scmamba2.loss import CLIPLoss
+# from scmamba2.models import MambaLMHeadModel, MambaConfig, scMambaLMHeadModel
+from scmamba2.models import scMambaConfig
+from scmamba2.models.scmamba import scMambaLMHeadModel
+from scmamba2.loss import CLIPLoss, ContrastiveLoss
 from scmamba2.trainer import Trainer
 from scmamba2.utils.metrics import (
     biology_conservation, omics_mixing, mean_F1_silhouette
@@ -55,7 +57,7 @@ def main(args):
         subset_hvg=args.n_top_genes,
         hvg_use_key=None,
         hvg_flavor="seurat_v3",
-        binning=101,
+        binning=51,
         result_binned_key="X_binned",
     )
     preprocessor_rna(rna, batch_key=args.batch_key)
@@ -94,22 +96,22 @@ def main(args):
     
     with open(args.config, 'r') as file:
         config = json.load(file)
-    config = MambaConfig(**config)
+    config_decoder1 = scMambaConfig(**config['decoder1'])
+    config_decoder2 = scMambaConfig(**config['decoder2'])
 
     # Create model
     model = scMambaLMHeadModel(
-        config=config,
+        config_omics1=config_decoder1,
+        config_omics2=config_decoder2,
         d_feature_omics1=d_rna_feature,
         d_feature_omics2=d_adt_feature,
-        patch_size=128,
-        multi_batches=False,
-        pool='first token',
-        normalize=False
+        pool='first token'
     )
     # Loss and optimizer
     criterion = CLIPLoss(
         requires_grad=args.requires_grad, logit_scale=args.logit_scale
     )
+    criterion = ContrastiveLoss()
     optimizer = optim.AdamW(
         model.parameters(), lr=args.lr, weight_decay=args.weight_decay
     )
@@ -125,7 +127,7 @@ def main(args):
     # Set up output directories and logging
     data_name = os.path.basename(args.data_dir).split('.')[0]
     out_dir = os.path.join(args.results_dir, data_name)
-    out_dir = f"{out_dir}batchsize{args.batch_size}projection_dim{config.vocab_size}"
+    out_dir = f"{out_dir}batchsize{args.batch_size}projection_dim{config_decoder1.vocab_size}"
     checkpoints_path = os.path.join(out_dir, 'checkpoints')
     os.makedirs(out_dir, exist_ok=True)
     os.makedirs(checkpoints_path, exist_ok=True)
@@ -186,7 +188,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_key", type=str, default=None)
     parser.add_argument("--n_top_genes", type=int, default=10000)
     parser.add_argument("--n_top_peaks", type=int, default=None)
-    parser.add_argument("--config", type=str, default="config_files/mamba2_config.json")
+    parser.add_argument("--config", type=str, default="config_files/scmamba2attn_config_rna_adt.json")
     parser.add_argument("--lr", type=float, default=5e-4)
     parser.add_argument("--weight_decay", type=float, default=0.05)
     parser.add_argument("--dropout", type=float, default=0.1)

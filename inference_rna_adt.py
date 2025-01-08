@@ -23,7 +23,9 @@ from tensorboardX import SummaryWriter
 
 from scmamba2.preprocess import Preprocessor, scATACseqPreprocessor
 from scmamba2.dataset.dataset import MultiomeModule, MultiomeDataset
-from scmamba2.models import MambaLMHeadModel, MambaConfig, scMambaLMHeadModel
+# from scmamba2.models import MambaLMHeadModel, MambaConfig, scMambaLMHeadModel
+from scmamba2.models import scMambaConfig
+from scmamba2.models.scmamba import scMambaLMHeadModel
 from scmamba2.loss import CLIPLoss
 from scmamba2.trainer import Trainer
 from scmamba2.utils.metrics import (
@@ -57,7 +59,7 @@ def main(args):
         subset_hvg=args.n_top_genes,
         hvg_use_key=None,
         hvg_flavor="seurat_v3",
-        binning=101,
+        binning=51,
         result_binned_key="X_binned",
     )
     preprocessor_rna(rna, batch_key=args.batch_key)
@@ -96,26 +98,24 @@ def main(args):
     
     with open(args.config, 'r') as file:
         config = json.load(file)
-    config = MambaConfig(**config)
+    config_decoder1 = scMambaConfig(**config['decoder1'])
+    config_decoder2 = scMambaConfig(**config['decoder2'])
 
     # Create model
     model = scMambaLMHeadModel(
-        config=config,
+        config_omics1=config_decoder1,
+        config_omics2=config_decoder2,
         d_feature_omics1=d_rna_feature,
         d_feature_omics2=d_adt_feature,
-        patch_size=128,
-        multi_batches=False,
-        pool='first token',
-        normalize=False
+        pool='first token'
     ).to(args.device)
 
     checkpoint = torch.load(args.checkpoints)
-    # print(checkpoint['model_state_dict'])
     model.load_state_dict(checkpoint['model_state_dict'])
 
     data_name = os.path.basename(args.data_dir).split('.')[0]
     out_dir = os.path.join(args.results_dir, data_name)
-    out_dir = f"{out_dir}batchsize{args.batch_size}projection_dim{config.vocab_size}"
+    out_dir = f"{out_dir}batchsize{args.batch_size}projection_dim{config_decoder1.vocab_size}"
     os.makedirs(out_dir, exist_ok=True)
 
     dataset = MultiomeDataset(mdata, "X_binned", "X_binned", omics1='rna', omics2='adt')
@@ -137,7 +137,7 @@ def main(args):
             device=args.device,
             n_neighbors=30, 
             metric='cosine', 
-            min_dist=0.1, 
+            min_dist=0.5, 
             resolution=0.3
         )
         metrics = {}
@@ -176,7 +176,7 @@ if __name__ == "__main__":
     parser.add_argument("--seed", default=42, type=int)
     parser.add_argument(
         "--checkpoints", type=str, 
-        default="results/accelerate_results/cite_BMMC_2batchsize128projection_dim50/checkpoints/scMamba.pt"
+        default=None
     )
     parser.add_argument("--device", type=str, default='cuda:2')
     parser.add_argument("--gpu_ids", type=list, default=[0, 1])
@@ -187,7 +187,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_key", type=str, default=None)
     parser.add_argument("--n_top_genes", type=int, default=10000)
     parser.add_argument("--n_top_peaks", type=int, default=None)
-    parser.add_argument("--config", type=str, default="config_files/mamba2_config.json")
+    parser.add_argument("--config", type=str, default="config_files/scmamba2attn_config_rna_adt.json")
     parser.add_argument("--lr", type=float, default=5e-4)
     parser.add_argument("--weight_decay", type=float, default=0.05)
     parser.add_argument("--dropout", type=float, default=0.1)
@@ -200,8 +200,6 @@ if __name__ == "__main__":
     parser.add_argument("--logit_scale", type=float, default=1)
     parser.add_argument("--epoch_nums", type=int, default=10)
     parser.add_argument("--results_dir", type=str, default='results/accelerate_results')
-    parser.add_argument('--local_rank', type=int, default=-1,
-                        help='local rank passed from distributed launcher')
      
     args = parser.parse_args()
 

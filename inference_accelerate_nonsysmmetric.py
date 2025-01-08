@@ -80,7 +80,7 @@ def main(args):
     preprocessor_atac(atac, batch_key=None)
     mdata.mod['atac'] = atac
     mu.pp.intersect_obs(mdata)
-    
+
     d_rna_feature = mdata.mod['rna'].X.shape[1]
     d_atac_feature = mdata.mod['atac'].X.shape[1]
 
@@ -104,8 +104,12 @@ def main(args):
     out_dir = os.path.join(args.results_dir, data_name)
     out_dir = f"{out_dir}batchsize{args.batch_size}projection_dim{config_decoder1.vocab_size}"
     os.makedirs(out_dir, exist_ok=True)
-
-    dataset = MultiomeDataset(mdata, "X_log1p", "X_binarized")
+    
+    dataset = MultiomeDataset(
+        mdata, 
+        "X_log1p" if not args.binning else 'X_binned', 
+        "X_binarized"
+    )
     # Test the model
     test_loader = DataLoader(
         dataset, 
@@ -173,6 +177,7 @@ if __name__ == "__main__":
     parser.add_argument("--data_dir", type=str, default="datasets/multiome/fetal.h5mu")
     parser.add_argument("--n_top_genes", type=int, default=20000)
     parser.add_argument("--n_top_peaks", type=int, default=40000)
+    parser.add_argument("--cell_numbers", type=int, default=0)
     parser.add_argument("--binning", type=int, default=0)
     parser.add_argument("--config", type=str, default="config_files/scmamba2_config.json")
     parser.add_argument("--lr", type=float, default=5e-4)

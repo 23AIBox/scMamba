@@ -3,10 +3,12 @@ import warnings
 
 import sys
 import os
+import csv
 # sys.path.append("..")
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import scanpy as sc
 import numpy as np
+import pandas as pd
 import argparse
 from tqdm import tqdm
 
@@ -14,6 +16,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import f1_score, precision_score, recall_score
 from torch.utils.data import DataLoader, TensorDataset
 from tensorboardX import SummaryWriter
 
@@ -40,6 +43,8 @@ def main(args):
         X=cell_emb,
         obs=rna.obs,
     )
+    adata = rna.copy()
+    celltype = adata.obs['cell_type']
     train_emb = adata[adata.obs['batch'].isin(args.train_batches)].X
     train_cell_type = adata[adata.obs['batch'].isin(args.train_batches)].obs['cell_type']
     
@@ -48,8 +53,11 @@ def main(args):
     
     # encoder the cell types
     label_encoder = LabelEncoder()
-    train_cell_type_encoded = label_encoder.fit_transform(train_cell_type)
+    celltype_encoded = label_encoder.fit_transform(celltype)
+    train_cell_type_encoded = label_encoder.transform(train_cell_type)
     test_cell_type_encoded = label_encoder.transform(test_cell_type)
+    # train_cell_type_encoded = label_encoder.fit_transform(train_cell_type)
+    # test_cell_type_encoded = label_encoder.transform(test_cell_type)
     
     # transform to tensor
     X_train_tensor = torch.tensor(train_emb, dtype=torch.float32)
@@ -134,7 +142,7 @@ def main(args):
 
     model.eval()
     all_predictions = []
-    all_indices = []
+    all_true = []
     correct = 0
     total = 0
     with torch.no_grad():
@@ -144,9 +152,29 @@ def main(args):
             outputs = model(X_emb)
             _, predicted = torch.max(outputs, 1)
             all_predictions.extend(predicted.cpu().numpy())
+            all_true.extend(cell_type.cpu().numpy())
             total += cell_type.size(0)
             correct += (predicted == cell_type).sum().item()
-    print(f"Accuracy: {correct / total:.4f}")
+    metrics = {}
+    metrics['acc'] = correct / total
+    metrics['f1_score'] = f1_score(all_true, all_predictions, average='weighted')
+    metrics['precision'] = precision_score(all_true, all_predictions, average='weighted')
+    metrics['recall'] = recall_score(all_true, all_predictions, average='weighted')
+    print(metrics)
+    if not os.path.exists(f'{out_dir}/metrics.csv'):
+        metrics_df = pd.DataFrame([metrics])
+    else:
+        metrics_df = pd.read_csv(
+            f'{out_dir}/metrics.csv' 
+        )
+        new_metrics_df = pd.DataFrame([metrics])
+        metrics_df = pd.concat([metrics_df, new_metrics_df], ignore_index=True)
+    metrics_df.to_csv(f'{out_dir}/metrics.csv', index=False)
+
+    
+    # f1 = f1_score(all_true, all_predictions, average='weighted')
+    # precision = precision_score(all_true, all_predictions, average='weighted')
+    # recall = recall_score(all_true, all_predictions, average='weighted')
 
     decoded_predictions = label_encoder.inverse_transform(all_predictions)
     adata_subset = adata[~adata.obs['batch'].isin(args.train_batches)].copy()
@@ -163,14 +191,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "--data_dir", 
         type=str, 
-        default="results/cite_BMMC_s1_500batchsize128projection_dim64/concat.h5ad"
+        default="results/benckmark/human_brainbatchsize32projection_dim64/concat.h5ad"
     )
     parser.add_argument("--lr", type=float, default='1e-4')
     parser.add_argument("--batch_size", type=int, default=64)
-    parser.add_argument("--epochs", type=int, default=50)
+    parser.add_argument("--epochs", type=int, default=15)
     # s1d1 is the training batch for s1, s4d9 is training batch for s4
-    parser.add_argument("--train_batches", type=list, default=['s1d1'])
-    parser.add_argument("--results_path", type=str, default='results/annotation/cite_BMMC_s1_500_2')
+    parser.add_argument("--train_batches", type=list, default=['AD'])
+    parser.add_argument("--results_path", type=str, default='results/annotation/human_brain')
 
     args = parser.parse_args()
     main(args)

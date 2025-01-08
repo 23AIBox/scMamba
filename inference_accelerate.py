@@ -102,8 +102,12 @@ def main(args):
     out_dir = os.path.join(args.results_dir, data_name)
     out_dir = f"{out_dir}batchsize{args.batch_size}projection_dim{config.vocab_size}"
     os.makedirs(out_dir, exist_ok=True)
-
-    dataset = MultiomeDataset(mdata, "X_log1p", "X_binarized")
+    
+    dataset = MultiomeDataset(
+        mdata, 
+        "X_log1p" if not args.binning else "X_binned", 
+        "X_binarized"
+    )
     # Test the model
     test_loader = DataLoader(
         dataset, 
@@ -161,7 +165,7 @@ if __name__ == "__main__":
     parser.add_argument("--seed", default=42, type=int)
     parser.add_argument(
         "--checkpoints", type=str, 
-        default="results/accelerate_results/fetalbatchsize64projection_dim50/checkpoints/scMamba.pt"
+        default=None
     )
     parser.add_argument("--device", type=str, default='cuda:1')
     parser.add_argument("--gpu_ids", type=list, default=[0, 1])
@@ -185,10 +189,7 @@ if __name__ == "__main__":
     parser.add_argument("--logit_scale", type=float, default=1)
     parser.add_argument("--epoch_nums", type=int, default=100)
     parser.add_argument("--results_dir", type=str, default='results/accelerate_results')
-    parser.add_argument('--local_rank', type=int, default=-1,
-                        help='local rank passed from distributed launcher')
     
-    parser = deepspeed.add_config_arguments(parser)
     args = parser.parse_args()
 
     main(args)   

@@ -35,3 +35,100 @@ class CLIPLoss(nn.Module):
         loss += (cosin_similarity_loss * self.cos_simi_scale)
 
         return loss, logits_per_atac
+    
+
+# def contrastive_loss(x, y, temperature):
+#     """
+#     Implements the contrastive loss function as shown in the provided equation.
+
+#     Args:
+#         x: Tensor of shape (N, D), where N is the batch size and D is the feature dimension (image embeddings).
+#         y: Tensor of shape (N, D), where N is the batch size and D is the feature dimension (text embeddings).
+#         temperature: Scalar, the temperature parameter \u03c3.
+
+#     Returns:
+#         loss: Scalar, the computed contrastive loss.
+#     """
+#     # # Normalize embeddings to unit vectors
+#     # x = F.normalize(x, p=2, dim=1)
+#     # y = F.normalize(y, p=2, dim=1)
+
+#     # Compute similarity matrices
+#     sim_matrix = torch.matmul(x, y.T) / temperature  # Shape: (N, N)
+
+#     # Compute image-to-text loss
+#     image_to_text_loss = -torch.mean(
+#         torch.log_softmax(sim_matrix, dim=1).diag()
+#     )
+
+#     # Compute text-to-image loss
+#     text_to_image_loss = -torch.mean(
+#         torch.log_softmax(sim_matrix.T, dim=1).diag()
+#     )
+
+#     # Total contrastive loss
+#     loss = (image_to_text_loss + text_to_image_loss) / 2
+
+#     return loss
+
+# class CLIPLoss(nn.Module):
+#     def __init__(self, logit_scale=2.6592, cos_simi_scale=1.0, requires_grad=False):
+#         super().__init__()
+#         self.logit_scale = nn.Parameter(
+#             torch.ones([]) * logit_scale, requires_grad=requires_grad
+#         )
+#         self.cos_simi_scale = cos_simi_scale
+#         self.cos = nn.CosineSimilarity(dim=1, eps=1e-6)
+
+#     def forward(self, rna_embeds, atac_embeds):
+
+#         loss = contrastive_loss(rna_embeds, atac_embeds, temperature=0.3)
+
+#         return loss, loss
+
+
+class ContrastiveLoss(torch.nn.Module):
+    def __init__(self, initial_temperature=0.2):
+        """
+        Implements the contrastive loss function with learnable temperature parameter.
+
+        Args:
+            initial_temperature: Scalar, the initial value for the temperature \u03c3.
+        """
+        super(ContrastiveLoss, self).__init__()
+        self.temperature = initial_temperature
+        self.cos = nn.CosineSimilarity(dim=1, eps=1e-6)
+    def forward(self, x, y):
+        """
+        Computes the contrastive loss.
+
+        Args:
+            x: Tensor of shape (N, D), where N is the batch size and D is the feature dimension (image embeddings).
+            y: Tensor of shape (N, D), where N is the batch size and D is the feature dimension (text embeddings).
+
+        Returns:
+            loss: Scalar, the computed contrastive loss.
+        """
+        # Normalize embeddings to unit vectors
+        # x = F.normalize(x, p=2, dim=1)
+        # y = F.normalize(y, p=2, dim=1)
+
+        # Compute similarity matrices
+        sim_matrix = torch.matmul(x, y.T) / self.temperature  # Shape: (N, N)
+
+        # Compute image-to-text loss
+        image_to_text_loss = -torch.mean(
+            torch.log_softmax(sim_matrix, dim=1).diag()
+        )
+
+        # Compute text-to-image loss
+        text_to_image_loss = -torch.mean(
+            torch.log_softmax(sim_matrix.T, dim=1).diag()
+        )
+
+        # Total contrastive loss
+        loss = (image_to_text_loss + text_to_image_loss) / 2
+        cosine_similarity_loss = 1 - torch.mean(self.cos(x, y))
+        loss += cosine_similarity_loss
+        
+        return loss, loss

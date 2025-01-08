@@ -28,26 +28,30 @@ export NCCL_P2P_DISABLE=1       # disable P2P communication
 unset CUDA_VISIBLE_DEVICES
 export PORT=$(python -Bu get_tcp_port.py 2>/dev/null | grep 'Distributed TCP PORT' | awk -F'|' '{print $2}' | xargs -n1 echo | head -n1)
 
-rm -rf results/benckmark/cite_BMMC_s4_200batchsize128projection_dim64/checkpoints
+rm -rf results/scale/10k_20k/fetalbatchsize64projection_dim64/checkpoints
 
-CUDA_VISIBLE_DEVICES=4,6 accelerate launch --num_processes=2 \
-    --config_file config_files/accelerate_config.yaml --main_process_port $PORT \
-    train_accelerate_rna_adt.py \
-        --batch_size 128 \
-        --data_dir datasets/multiome/cite_BMMC_s4_200.h5mu \
-        --batch_key batch \
-        --n_top_genes 0 \
-        --config config_files/scmamba2attn_config_rna_adt.json \
+CUDA_VISIBLE_DEVICES=0,3 accelerate launch \
+    --num_processes=2 \
+    --main_process_port $PORT\
+    --config_file config_files/accelerate_config.yaml \
+    train_accelerate_nonsysmmetric.py \
+        --batch_size 64 \
+        --lr 5e-4 \
+        --data_dir datasets/multiome/fetal_sample/fetal.h5mu \
+        --n_top_genes 10240 \
+        --n_top_peaks 20480 \
+        --config config_files/scmamba2attn_config_scale.json \
         --epoch_nums 100 \
-        --results_dir results/benckmark
+        --results_dir results/scale/10k_20k
 
-python inference_rna_adt.py \
-    --checkpoints results/benckmark/cite_BMMC_s4_200batchsize128projection_dim64/checkpoints/scMamba.pt \
-    --device cuda:4 \
-    --batch_size 128 \
-    --data_dir datasets/multiome/cite_BMMC_s4_200.h5mu \
-    --batch_key batch \
-    --n_top_genes 0 \
-    --config config_files/scmamba2attn_config_rna_adt.json \
+python inference_accelerate_nonsysmmetric.py \
+    --device cuda:0 \
+    --checkpoints results/scale/10k_20k/fetalbatchsize64projection_dim64/checkpoints/scMamba.pt \
+    --batch_size 64 \
+    --lr 5e-4 \
+    --data_dir datasets/multiome/fetal_sample/fetal.h5mu \
+    --n_top_genes 10240 \
+    --n_top_peaks 20480 \
+    --config config_files/scmamba2attn_config_scale.json \
     --epoch_nums 100 \
-    --results_dir results/benckmark 
+    --results_dir results/scale/10k_20k

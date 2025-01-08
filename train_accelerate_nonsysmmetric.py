@@ -23,7 +23,7 @@ from scmamba2.preprocess import Preprocessor, scATACseqPreprocessor
 from scmamba2.dataset.dataset import MultiomeDataset
 from scmamba2.models.scmamba import scMambaLMHeadModel
 from scmamba2.models.config_scmamba import scMambaConfig
-from scmamba2.loss import CLIPLoss
+from scmamba2.loss import CLIPLoss, ContrastiveLoss
 from scmamba2.trainer import Trainer
 from scmamba2.utils.metrics import (
     biology_conservation, omics_mixing, mean_F1_silhouette
@@ -44,6 +44,11 @@ def main(args):
 
     # Load data
     mdata = mu.read(args.data_dir)
+    if args.cell_numbers:
+        selected_cells = np.random.choice(
+            mdata.obs.index, size=args.cell_numbers, replace=False
+        )
+        mdata = mdata[selected_cells, :].copy()
     rna = mdata.mod['rna'].copy()
     preprocessor_rna = Preprocessor(
         use_key="X",
@@ -83,7 +88,11 @@ def main(args):
     d_atac_feature = mdata.mod['atac'].X.shape[1]
     
     # Prepare data loaders
-    train_dataset = MultiomeDataset(mdata, "X_log1p", "X_binarized")
+    train_dataset = MultiomeDataset(
+        mdata, 
+        "X_log1p" if not args.binning else 'X_binned', 
+        "X_binarized"
+    )
     train_dataloader = DataLoader(
         train_dataset, 
         batch_size=args.batch_size, 
@@ -108,6 +117,7 @@ def main(args):
     criterion = CLIPLoss(
         requires_grad=args.requires_grad, logit_scale=args.logit_scale
     )
+    criterion = ContrastiveLoss()
     optimizer = optim.AdamW(
         model.parameters(), lr=args.lr, weight_decay=args.weight_decay
     )
@@ -183,6 +193,7 @@ if __name__ == "__main__":
     parser.add_argument("--data_dir", type=str, default="datasets/multiome/fetal.h5mu")
     parser.add_argument("--n_top_genes", type=int, default=20000)
     parser.add_argument("--n_top_peaks", type=int, default=40000)
+    parser.add_argument("--cell_numbers", type=int, default=0)
     parser.add_argument("--binning", type=int, default=0)
     parser.add_argument("--config", type=str, default="config_files/scmamba2_config.json")
     parser.add_argument("--lr", type=float, default=5e-4)

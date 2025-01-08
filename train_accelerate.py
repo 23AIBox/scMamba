@@ -82,7 +82,11 @@ def main(args):
     d_atac_feature = mdata.mod['atac'].X.shape[1]
     
     # Prepare data loaders
-    train_dataset = MultiomeDataset(mdata, "X_log1p", "X_binarized")
+    train_dataset = MultiomeDataset(
+        mdata, 
+        "X_log1p" if not args.binning else "X_binned", 
+        "X_binarized"
+    )
     train_dataloader = DataLoader(
         train_dataset, 
         batch_size=args.batch_size, 
