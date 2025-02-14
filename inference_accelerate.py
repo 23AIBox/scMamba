@@ -22,8 +22,9 @@ from torch import optim
 from tensorboardX import SummaryWriter
 
 from scmamba2.preprocess import Preprocessor, scATACseqPreprocessor
-from scmamba2.dataset.dataset import MultiomeModule, MultiomeDataset
-from scmamba2.models import MambaLMHeadModel, MambaConfig, scMambaLMHeadModel
+from scmamba2.dataset.dataset import MultiomeDataset
+from scmamba2.models.scmamba import scMambaLMHeadModel
+from scmamba2.models.config_scmamba import scMambaConfig
 from scmamba2.loss import CLIPLoss
 from scmamba2.trainer import Trainer
 from scmamba2.utils.metrics import (
@@ -79,20 +80,22 @@ def main(args):
     preprocessor_atac(atac, batch_key=None)
     mdata.mod['atac'] = atac
     mu.pp.intersect_obs(mdata)
-    
+
     d_rna_feature = mdata.mod['rna'].X.shape[1]
     d_atac_feature = mdata.mod['atac'].X.shape[1]
 
     with open(args.config, 'r') as file:
         config = json.load(file)
-    config = MambaConfig(**config)
+    config_decoder1 = scMambaConfig(**config['decoder1'])
+    config_decoder2 = scMambaConfig(**config['decoder2'])
 
     # Create model
     model = scMambaLMHeadModel(
-        config=config,
+        config_omics1=config_decoder1,
+        config_omics2=config_decoder2,
         d_feature_omics1=d_rna_feature,
         d_feature_omics2=d_atac_feature,
-        patch_size=256,
+        pool=args.pool
     ).to(args.device)
 
     checkpoint = torch.load(args.checkpoints)
@@ -100,12 +103,12 @@ def main(args):
 
     data_name = os.path.basename(args.data_dir).split('.')[0]
     out_dir = os.path.join(args.results_dir, data_name)
-    out_dir = f"{out_dir}batchsize{args.batch_size}projection_dim{config.vocab_size}"
+    out_dir = f"{out_dir}batchsize{args.batch_size}projection_dim{config_decoder1.d_embedding}"
     os.makedirs(out_dir, exist_ok=True)
     
     dataset = MultiomeDataset(
         mdata, 
-        "X_log1p" if not args.binning else "X_binned", 
+        "X_log1p" if not args.binning else 'X_binned', 
         "X_binarized"
     )
     # Test the model
@@ -175,8 +178,10 @@ if __name__ == "__main__":
     parser.add_argument("--data_dir", type=str, default="datasets/multiome/fetal.h5mu")
     parser.add_argument("--n_top_genes", type=int, default=20000)
     parser.add_argument("--n_top_peaks", type=int, default=40000)
+    parser.add_argument("--cell_numbers", type=int, default=0)
     parser.add_argument("--binning", type=int, default=0)
-    parser.add_argument("--config", type=str, default="config_files/mamba2_config.json")
+    parser.add_argument("--pool", type=str, default='last token')
+    parser.add_argument("--config", type=str, default="config_files/scmamba2_config.json")
     parser.add_argument("--lr", type=float, default=5e-4)
     parser.add_argument("--weight_decay", type=float, default=0.05)
     parser.add_argument("--dropout", type=float, default=0.1)
@@ -184,7 +189,6 @@ if __name__ == "__main__":
     parser.add_argument("--projection_dim", type=int, default=128)
     parser.add_argument("--requires_grad", action="store_true", default=True)
     parser.add_argument("--normalize", action="store_true", default=True)
-    parser.add_argument("--multi_batches", action="store_true", default=False)
     parser.add_argument("--fast_dev_run", action="store_true", default=False)
     parser.add_argument("--logit_scale", type=float, default=1)
     parser.add_argument("--epoch_nums", type=int, default=100)

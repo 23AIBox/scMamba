@@ -1,8 +1,6 @@
 import sys
 sys.path.append(".")
 
-from .config_mamba import MambaConfig
 from .config_scmamba import scMambaConfig
-# from .mixer_seq_simple import MambaLMHeadModel
-from .model import MambaLMHeadModel, scMambaLMHeadModel
+from .scmamba import scMambaLMHeadModel
 from .module import ClsDecoder

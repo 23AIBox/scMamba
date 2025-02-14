@@ -40,7 +40,7 @@ class Trainer:
                 val_loss = self._validate_epoch(val_loader, epoch)
                 self._log_epoch(epoch, val_loss)
 
-            if (epoch + 1) % 5 == 0:
+            if (epoch + 1) % 10 == 0:
                 self._save_checkpoint(epoch + 1, train_loss)
         self._save_checkpoint(epoch + 1, train_loss)
         self.writer.close()

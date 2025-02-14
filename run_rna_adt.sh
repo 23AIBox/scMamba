@@ -14,7 +14,7 @@ fi
 unset __conda_setup
 # <<< conda initialize <<<
 
-conda activate mamba2
+conda activate mamba
 which deepspeed
 which python
 

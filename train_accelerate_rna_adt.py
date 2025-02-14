@@ -127,7 +127,7 @@ def main(args):
     # Set up output directories and logging
     data_name = os.path.basename(args.data_dir).split('.')[0]
     out_dir = os.path.join(args.results_dir, data_name)
-    out_dir = f"{out_dir}batchsize{args.batch_size}projection_dim{config_decoder1.vocab_size}"
+    out_dir = f"{out_dir}batchsize{args.batch_size}projection_dim{config_decoder1.d_embedding}"
     checkpoints_path = os.path.join(out_dir, 'checkpoints')
     os.makedirs(out_dir, exist_ok=True)
     os.makedirs(checkpoints_path, exist_ok=True)

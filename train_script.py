@@ -14,7 +14,7 @@ from tensorboardX import SummaryWriter
 
 from scmamba2.preprocess import Preprocessor, scATACseqPreprocessor
 from scmamba2.dataset.dataset import MultiomeModule
-from scmamba2.models import MambaConfig, scMambaLMHeadModel
+from scmamba2.models import scMambaConfig, scMambaLMHeadModel
 from scmamba2.loss import CLIPLoss
 from scmamba2.trainer import Trainer
 from scmamba2.utils.metrics import (

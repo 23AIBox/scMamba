@@ -20,9 +20,10 @@ from torch import optim
 from tensorboardX import SummaryWriter
 
 from scmamba2.preprocess import Preprocessor, scATACseqPreprocessor
-from scmamba2.dataset.dataset import MultiomeModule, MultiomeDataset
-from scmamba2.models import MambaLMHeadModel, MambaConfig, scMambaLMHeadModel
-from scmamba2.loss import CLIPLoss
+from scmamba2.dataset.dataset import MultiomeDataset
+from scmamba2.models.scmamba import scMambaLMHeadModel
+from scmamba2.models.config_scmamba import scMambaConfig
+from scmamba2.loss import CLIPLoss, ContrastiveLoss
 from scmamba2.trainer import Trainer
 from scmamba2.utils.metrics import (
     biology_conservation, omics_mixing, mean_F1_silhouette
@@ -43,6 +44,11 @@ def main(args):
 
     # Load data
     mdata = mu.read(args.data_dir)
+    if args.cell_numbers:
+        selected_cells = np.random.choice(
+            mdata.obs.index, size=args.cell_numbers, replace=False
+        )
+        mdata = mdata[selected_cells, :].copy()
     rna = mdata.mod['rna'].copy()
     preprocessor_rna = Preprocessor(
         use_key="X",
@@ -84,7 +90,7 @@ def main(args):
     # Prepare data loaders
     train_dataset = MultiomeDataset(
         mdata, 
-        "X_log1p" if not args.binning else "X_binned", 
+        "X_log1p" if not args.binning else 'X_binned', 
         "X_binarized"
     )
     train_dataloader = DataLoader(
@@ -97,25 +103,28 @@ def main(args):
     
     with open(args.config, 'r') as file:
         config = json.load(file)
-    config = MambaConfig(**config)
+    config_decoder1 = scMambaConfig(**config['decoder1'])
+    config_decoder2 = scMambaConfig(**config['decoder2'])
 
     # Create model
     model = scMambaLMHeadModel(
-        config=config,
+        config_omics1=config_decoder1,
+        config_omics2=config_decoder2,
         d_feature_omics1=d_rna_feature,
         d_feature_omics2=d_atac_feature,
-        patch_size=256,
+        pool=args.pool
     )
     # Loss and optimizer
     criterion = CLIPLoss(
         requires_grad=args.requires_grad, logit_scale=args.logit_scale
     )
+    criterion = ContrastiveLoss()
     optimizer = optim.AdamW(
         model.parameters(), lr=args.lr, weight_decay=args.weight_decay
     )
     # WarmupCosineLR
-    num_training_steps = len(train_dataloader) * args.epoch_nums  # 假设训练 10 个 epoch
-    num_warmup_steps = int(0.1 * num_training_steps)  # 10% 的步数用于 warmup
+    num_training_steps = len(train_dataloader) * args.epoch_nums
+    num_warmup_steps = int(0.1 * num_training_steps)  # 10% steps for warmup
     scheduler = get_cosine_schedule_with_warmup(
         optimizer,
         num_warmup_steps=num_warmup_steps,
@@ -125,7 +134,7 @@ def main(args):
     # Set up output directories and logging
     data_name = os.path.basename(args.data_dir).split('.')[0]
     out_dir = os.path.join(args.results_dir, data_name)
-    out_dir = f"{out_dir}batchsize{args.batch_size}projection_dim{config.vocab_size}"
+    out_dir = f"{out_dir}batchsize{args.batch_size}projection_dim{config_decoder1.d_embedding}"
     checkpoints_path = os.path.join(out_dir, 'checkpoints')
     os.makedirs(out_dir, exist_ok=True)
     os.makedirs(checkpoints_path, exist_ok=True)
@@ -185,14 +194,15 @@ if __name__ == "__main__":
     parser.add_argument("--data_dir", type=str, default="datasets/multiome/fetal.h5mu")
     parser.add_argument("--n_top_genes", type=int, default=20000)
     parser.add_argument("--n_top_peaks", type=int, default=40000)
+    parser.add_argument("--cell_numbers", type=int, default=0)
     parser.add_argument("--binning", type=int, default=0)
-    parser.add_argument("--config", type=str, default="config_files/mamba2_config.json")
+    parser.add_argument("--pool", type=str, default='last token')
+    parser.add_argument("--config", type=str, default="config_files/scmamba2_config.json")
     parser.add_argument("--lr", type=float, default=5e-4)
     parser.add_argument("--weight_decay", type=float, default=0.05)
     parser.add_argument("--dropout", type=float, default=0.1)
     parser.add_argument("--hidden_dropout_prob", type=float, default=0.1)
     parser.add_argument("--requires_grad", action="store_true", default=True)
-    parser.add_argument("--multi_batches", action="store_true", default=False)
     parser.add_argument("--fast_dev_run", action="store_true", default=False)
     parser.add_argument("--logit_scale", type=float, default=1)
     parser.add_argument("--epoch_nums", type=int, default=100)

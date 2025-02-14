@@ -22,7 +22,7 @@ from mamba_ssm.modules.mamba_simple import Mamba
 from mamba_ssm.modules.mamba2 import Mamba2
 from mamba_ssm.modules.mha import MHA
 from mamba_ssm.modules.mlp import GatedMLP
-from mamba_ssm.modules.block import Block
+# from mamba_ssm.modules.block import Block
 from mamba_ssm.utils.generation import GenerationMixin
 from mamba_ssm.utils.hf import load_config_hf, load_state_dict_hf
 
@@ -32,6 +32,7 @@ except ImportError:
     RMSNorm, layer_norm_fn, rms_norm_fn = None, None, None
 
 from ..tokenizer.tokenizer import scEmbeddings
+from .block import Block
 from .config_scmamba import scMambaConfig
 from ..utils.plot import plot_umap, plot_paired_umap
 from .. import logger
@@ -133,7 +134,6 @@ class MixerModel(nn.Module):
         feature_size: int,
         patch_size: int,
         d_intermediate: int,
-        vocab_size: int,
         ssm_cfg=None,
         attn_layer_idx=None,
         attn_cfg=None,
@@ -149,7 +149,6 @@ class MixerModel(nn.Module):
         super().__init__()
         self.residual_in_fp32 = residual_in_fp32
 
-        # self.embedding = nn.Embedding(vocab_size, d_model, **factory_kwargs)
         self.embedding = scEmbeddings(feature_size, patch_size, d_model)
         # We change the order of residual and layer norm:
         # Instead of LN -> Attn / MLP -> Add, we do:
@@ -241,29 +240,25 @@ class MambaLMHeadModel(nn.Module, GenerationMixin):
         patch_size = config.patch_size
         n_layer = config.n_layer
         d_intermediate = config.d_intermediate
-        vocab_size = config.vocab_size
+        d_embedding = config.d_embedding
         ssm_cfg = config.ssm_cfg
         attn_layer_idx = config.attn_layer_idx
         attn_cfg = config.attn_cfg
         rms_norm = config.rms_norm
         residual_in_fp32 = config.residual_in_fp32
         fused_add_norm = config.fused_add_norm
-        pad_vocab_size_multiple = config.pad_vocab_size_multiple
         factory_kwargs = {"device": device, "dtype": dtype}
 
         self.normalize = normalize
         self.pool = pool
 
         super().__init__()
-        # if vocab_size % pad_vocab_size_multiple != 0:
-        #     vocab_size += pad_vocab_size_multiple - (vocab_size % pad_vocab_size_multiple)
         self.backbone = MixerModel(
             d_model=d_model,
             n_layer=n_layer,
             feature_size=d_feature,
             patch_size=patch_size,
             d_intermediate=d_intermediate,
-            vocab_size=vocab_size,
             ssm_cfg=ssm_cfg,
             attn_layer_idx=attn_layer_idx,
             attn_cfg=attn_cfg,
@@ -274,7 +269,7 @@ class MambaLMHeadModel(nn.Module, GenerationMixin):
             **factory_kwargs,
         )
         self.active = nn.Tanh()
-        self.lm_head = nn.Linear(d_model, vocab_size, bias=False, **factory_kwargs)
+        self.lm_head = nn.Linear(d_model, d_embedding, bias=False, **factory_kwargs)
 
         # Initialize weights and apply final processing
         self.apply(
@@ -284,7 +279,6 @@ class MambaLMHeadModel(nn.Module, GenerationMixin):
                 **(initializer_cfg if initializer_cfg is not None else {}),
             )
         )
-        # self.tie_weights()
 
     def allocate_inference_cache(self, batch_size, max_seqlen, dtype=None, **kwargs):
         return self.backbone.allocate_inference_cache(batch_size, max_seqlen, dtype=dtype, **kwargs)
@@ -295,14 +289,14 @@ class MambaLMHeadModel(nn.Module, GenerationMixin):
         num_last_tokens: if > 0, only return the logits for the last n tokens
         """
         hidden_states = self.backbone(input_ids, inference_params=inference_params, **mixer_kwargs)
+        
         if self.pool == 'mean':
             hidden_states = hidden_states.mean(dim=1)
         elif self.pool == 'last token':
             hidden_states = hidden_states[:, -1]
         elif self.pool == 'first token':
             hidden_states = hidden_states[:, 0]
-        # if num_last_tokens > 0:
-        #     hidden_states = hidden_states[:, -num_last_tokens:]
+        
         if self.normalize:
             hidden_states = hidden_states / torch.linalg.norm(hidden_states, ord=2, dim=-1, keepdim=True)
         hidden_states = self.active(hidden_states)
@@ -387,7 +381,6 @@ class scMambaLMHeadModel(nn.Module, GenerationMixin):
 
     def __init__(
         self,
-        # config: MambaConfig,
         config_omics1: scMambaConfig,
         config_omics2: scMambaConfig,
         d_feature_omics1: int,

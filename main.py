@@ -10,11 +10,12 @@ import muon as mu
 
 import torch
 from torch import optim
+from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
 
 from scmamba2.preprocess import Preprocessor, scATACseqPreprocessor
-from scmamba2.dataset.dataset import MultiomeModule
-from scmamba2.models import MambaConfig, scMambaLMHeadModel
+from scmamba2.dataset.dataset import MultiomeDataset
+from scmamba2.models import scMambaConfig, scMambaLMHeadModel
 from scmamba2.loss import CLIPLoss, ContrastiveLoss
 from scmamba2.trainer import Trainer
 from scmamba2.utils.metrics import (
@@ -22,34 +23,35 @@ from scmamba2.utils.metrics import (
 )
 from scmamba2 import logger
 
-# torch.cuda.set_device("cuda:2")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="scMamba")
     parser.add_argument("--seed", default=42, type=int)
     parser.add_argument(
         "--checkpoint", type=str, 
-        default="results/benckmark/SHAREV2_BMMCbatchsize128projection_dim64/checkpoints/scMamba100.pt"
+        default=None
     )
-    parser.add_argument("--Retraining", type=bool, default=True)
-    parser.add_argument("--device", type=str, default='cuda:7')
-    parser.add_argument("--gpu_ids", type=list, default=[7])
+    parser.add_argument("--Retraining", type=bool, default=False)
+    parser.add_argument("--device", type=str, default='cuda:0')
+    parser.add_argument("--gpu_ids", type=list, default=[0])
 
     # DataModule
     parser.add_argument("--batch_size", type=int, default=128)
-    parser.add_argument("--num_workers", type=int, default=0)
+    parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument(
-        "--data_dir", type=str, default="datasets/multiome/SHAREV2_BMMC.h5mu"
+        "--data_dir", type=str, default="datasets/multiome/AD.h5mu"
     )
     parser.add_argument("--backed", action="store_true", default=False)
     parser.add_argument("--n_top_genes", type=int, default=None)
     parser.add_argument("--n_top_peaks", type=int, default=None)
-    parser.add_argument("--LSI", type=bool, default=True)
-    parser.add_argument("--PCA", type=bool, default=True)
+    parser.add_argument("--LSI", type=bool, default=False)
+    parser.add_argument("--PCA", type=bool, default=False)
     parser.add_argument("--mask", type=float, default=None)
+    parser.add_argument("--binning", type=int, default=0)
 
     # Module
-    parser.add_argument("--config", type=str, default="config_files/mamba2attn_config.json")
+    parser.add_argument("--pool", type=str, default='last token')
+    parser.add_argument("--config", type=str, default="config_files/scmamba2_config.json")
     parser.add_argument("--lr", type=float, default=1.5e-4)
     parser.add_argument("--weight_decay", type=float, default=0.05)
     parser.add_argument("--dropout", type=float, default=0.1)
@@ -58,15 +60,12 @@ if __name__ == "__main__":
         "--requires_grad", action="store_true", default=True
     )
     parser.add_argument(
-        "--normalize", action="store_true", default=True
-    )
-    parser.add_argument(
         "--multi_batches", action="store_true", default=False
     )
     parser.add_argument("--fast_dev_run", action="store_true", default=False)
-    parser.add_argument("--logit_scale", type=float, default=1)
+    parser.add_argument("--temperature", type=float, default=0.2)
     parser.add_argument("--cos_simi_scale", type=float, default=1)
-    parser.add_argument("--epoch_nums", type=int, default=50)
+    parser.add_argument("--epoch_nums", type=int, default=80)
     parser.add_argument("--results_dir", type=str, default='results/benckmark')
     
     args = parser.parse_args()
@@ -136,49 +135,49 @@ if __name__ == "__main__":
         d_rna_feature = mdata.mod['rna'].X.shape[1]
         d_atac_feature = mdata.mod['atac'].X.shape[1]
 
+    # Prepare dataset
+    train_dataset = MultiomeDataset(
+        mdata, 
+        "X_log1p" if not args.binning else 'X_binned', 
+        "X_binarized"
+    )
+
+    # load configure file
     with open(args.config, 'r') as file:
         config = json.load(file)
-    config = MambaConfig(**config)
+    config_decoder1 = scMambaConfig(**config['decoder1'])
+    config_decoder2 = scMambaConfig(**config['decoder2'])
 
-    if args.checkpoint is None:
-        dm = MultiomeModule(
-            mdata=mdata, 
-            use_layer1="X_log1p" if not args.PCA else "X_pca", 
-            use_layer2="X_binarized" if not args.LSI else "X_lsi", 
-            # use_layer1="X_pca", 
-            # use_layer2="X_lsi", 
-            batch_size=args.batch_size, 
-            num_workers=args.num_workers
-        )
-        model = scMambaLMHeadModel(
-            config=config,
-            d_feature_omics1=d_rna_feature,
-            d_feature_omics2=d_atac_feature,
-            patch_size=256,
-            device=device
-        ).to(device)
-        
-        if torch.cuda.device_count() > 1: 
-            print("Let's use", len(gpu_ids), "GPUs!")
-            model = torch.nn.DataParallel(model, device_ids=gpu_ids)
+    # Create model
+    model = scMambaLMHeadModel(
+        config_omics1=config_decoder1,
+        config_omics2=config_decoder2,
+        d_feature_omics1=d_rna_feature,
+        d_feature_omics2=d_atac_feature,
+        pool=args.pool
+    ).to(device)
 
-        # train the model
-        criterion = CLIPLoss(
-            requires_grad=args.requires_grad, logit_scale=args.logit_scale, cos_simi_scale=args.cos_simi_scale
-        )
-        criterion = ContrastiveLoss()
-        optimizer = optim.AdamW(
-            model.parameters(), lr=args.lr, weight_decay=args.weight_decay
-        )
+    if torch.cuda.device_count() > 1: 
+        print("Let's use", len(gpu_ids), "GPUs!")
+        model = torch.nn.DataParallel(model, device_ids=gpu_ids)
 
-        data_name = os.path.basename(args.data_dir).split('.')[0]
-        out_dir = os.path.join(args.results_dir, data_name)
-        out_dir = f"{out_dir}batchsize{args.batch_size}projection_dim{config.vocab_size}"
-        os.makedirs(out_dir, exist_ok=True)
-        os.makedirs(os.path.join(out_dir, 'checkpoints'), exist_ok=True)
-        
-        writer = SummaryWriter(f'{out_dir}/runs/exp')
-        
+    # build loss function and optimizer
+    criterion = ContrastiveLoss(
+        temperature=args.temperature, cos_simi_scale=args.cos_simi_scale
+    )
+    optimizer = optim.AdamW(
+        model.parameters(), lr=args.lr, weight_decay=args.weight_decay
+    )
+
+    # set up output directories and logging
+    data_name = os.path.basename(args.data_dir).split('.')[0]
+    out_dir = os.path.join(args.results_dir, data_name)
+    out_dir = f"{out_dir}batchsize{args.batch_size}projection_dim{config_decoder1.d_embedding}"
+    os.makedirs(out_dir, exist_ok=True)
+    os.makedirs(os.path.join(out_dir, 'checkpoints'), exist_ok=True)
+    writer = SummaryWriter(f'{out_dir}/runs/exp')
+    
+    if args.checkpoint is None:     # training model
         trainer = Trainer(
             model=model,
             criterion=criterion,
@@ -188,58 +187,25 @@ if __name__ == "__main__":
             writer=writer,
             device=args.device,
         )
-
-        # train the model
-        dm.setup(stage="fit")
-        train_loader = dm.train_dataloader()
-        val_loader = dm.val_dataloader()
+        train_dataloader = DataLoader(
+            train_dataset, 
+            batch_size=args.batch_size, 
+            shuffle=True,
+            num_workers=args.num_workers,
+            pin_memory=True,
+        )
         logger.info("Training the model ...")
         finally_epoch = trainer.fit(
-            train_loader=train_loader,
+            train_loader=train_dataloader,
         )
 
-    elif args.Retraining:
-        dm = MultiomeModule(
-            mdata=mdata, 
-            use_layer1="X_log1p" if not args.PCA else "X_pca", 
-            use_layer2="X_binarized" if not args.LSI else "X_lsi", 
-            batch_size=args.batch_size, num_workers=args.num_workers
-        )
-        model = scMambaLMHeadModel(
-            config=config,
-            d_feature_omics1=d_rna_feature,
-            d_feature_omics2=d_atac_feature,
-            patch_size=256,
-            device=device
-        ).to(device)
-
-        criterion = CLIPLoss(
-            requires_grad=args.requires_grad, logit_scale=args.logit_scale, 
-        )
-        optimizer = optim.AdamW(
-            model.parameters(), lr=args.lr, weight_decay=args.weight_decay
-        )
-        # scheduler_lr = optim.lr_scheduler.CosineAnnealingLR(optimizer, args.epoch_nums)
+    elif args.Retraining:       # load checkpoint and re-training model
         # load the pre-training model
         checkpoint = torch.load(args.checkpoint)
         model.load_state_dict(checkpoint['model_state_dict'])
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-        # scheduler_lr.load_state_dict(checkpoint['scheduler_state_dict'])
         epoch = checkpoint['epoch']
-        
-        if torch.cuda.device_count() > 1: 
-            print("Let's use", len(gpu_ids), "GPUs!")
-            model = torch.nn.DataParallel(model, device_ids=gpu_ids)
-        
-        # create the directory to save results
-        data_name = os.path.basename(args.data_dir).split('.')[0]
-        out_dir = os.path.join(args.results_dir, data_name)
-        out_dir = f"{out_dir}batchsize{args.batch_size}projection_dim{config.vocab_size}"
-        os.makedirs(out_dir, exist_ok=True)
-        os.makedirs(os.path.join(out_dir, 'checkpoints'), exist_ok=True)
-        
-        writer = SummaryWriter(f'{out_dir}/runs/exp')
-        
+
         trainer = Trainer(
             model=model,
             criterion=criterion,
@@ -250,50 +216,34 @@ if __name__ == "__main__":
             device=args.device,
             init_epoch=epoch
         )
-
         # train the model
-        dm.setup(stage="fit")
-        train_loader = dm.train_dataloader()
-        val_loader = dm.val_dataloader()
-        
+        train_dataloader = DataLoader(
+            train_dataset, 
+            batch_size=args.batch_size, 
+            shuffle=True,
+            num_workers=args.num_workers,
+            pin_memory=True,
+        )
+        logger.info("Training the model ...")
         finally_epoch = trainer.fit(
-            train_loader=train_loader,
+            train_loader=train_dataloader,
         )
 
-    else:
-        dm = MultiomeModule(
-            mdata=mdata, 
-            use_layer1="X_log1p" if not args.PCA else "X_pca", 
-            use_layer2="X_binarized" if not args.LSI else "X_lsi", 
-            batch_size=args.batch_size, num_workers=args.num_workers
-        )
-        model = scMambaLMHeadModel(
-            config=config,
-            d_feature_omics1=d_rna_feature,
-            d_feature_omics2=d_atac_feature,
-            patch_size=256,
-            device=device
-        ).to(device)
-
+    else:       # load checkpoint for inference
         checkpoint = torch.load(args.checkpoint)
         model.load_state_dict(checkpoint['model_state_dict'])
         finally_epoch = checkpoint['epoch']
 
     if not args.fast_dev_run:
-        data_name = os.path.basename(args.data_dir).split('.')[0]
-        out_dir = os.path.join(args.results_dir, data_name)
-        out_dir = f"{out_dir}batchsize{args.batch_size}projection_dim{config.vocab_size}"
-        os.makedirs(out_dir, exist_ok=True)
-
-        if isinstance(model, torch.nn.DataParallel):
-            model = model.module
-
-        model = model.to(device)
-        model.eval()
-        
+        model.eval()        
         # Test the model
-        dm.setup(stage='predict')
-        test_loader = dm.predict_dataloader()
+        test_loader = DataLoader(
+            train_dataset, 
+            batch_size=args.batch_size, 
+            shuffle=False,
+            num_workers=args.num_workers,
+            pin_memory=True,
+        )
         with torch.no_grad():
             concate_emb, rna_emb, atac_emb = model.get_representation(
                 dataloader=test_loader, 
