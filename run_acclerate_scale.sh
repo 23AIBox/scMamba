@@ -14,7 +14,7 @@ fi
 unset __conda_setup
 # <<< conda initialize <<<
 
-conda activate mamba
+conda activate mamba2
 which deepspeed
 which python
 
@@ -28,30 +28,30 @@ export NCCL_P2P_DISABLE=1       # disable P2P communication
 unset CUDA_VISIBLE_DEVICES
 export PORT=$(python -Bu get_tcp_port.py 2>/dev/null | grep 'Distributed TCP PORT' | awk -F'|' '{print $2}' | xargs -n1 echo | head -n1)
 
-rm -rf results/scale/fetal_200000batchsize64projection_dim64/checkpoints
+rm -rf results/scale/fetalbatchsize64projection_dim64/checkpoints
 
-CUDA_VISIBLE_DEVICES=1,2 accelerate launch \
+CUDA_VISIBLE_DEVICES=2,3 accelerate launch \
     --num_processes=2 \
     --main_process_port $PORT\
     --config_file config_files/accelerate_config.yaml \
     train_accelerate.py \
         --batch_size 64 \
         --lr 5e-4 \
-        --data_dir datasets/multiome/fetal_sample/fetal_200000.h5mu \
+        --data_dir datasets/multiome/fetal_sample/fetal.h5mu \
         --n_top_genes 10240 \
         --n_top_peaks 20480 \
         --config config_files/scmamba2attn_config_scale.json \
-        --epoch_nums 100 \
+        --epoch_nums 80 \
         --results_dir results/scale
 
 python inference_accelerate.py \
     --device cuda:2 \
-    --checkpoints results/scale/fetal_200000batchsize64projection_dim64/checkpoints/scMamba.pt \
+    --checkpoints results/scale/fetalbatchsize64projection_dim64/checkpoints/scMamba.pt \
     --batch_size 64 \
     --lr 5e-4 \
-    --data_dir datasets/multiome/fetal_sample/fetal_200000.h5mu \
+    --data_dir datasets/multiome/fetal_sample/fetal.h5mu \
     --n_top_genes 10240 \
     --n_top_peaks 20480 \
     --config config_files/scmamba2attn_config_scale.json \
-    --epoch_nums 100 \
+    --epoch_nums 80 \
     --results_dir results/scale

@@ -19,8 +19,8 @@
         "attn_cfg": {
             "causal": true,
             "d_conv": 4,
-            "head_dim": 64,
-            "num_heads": 8,
+            "head_dim": 256,
+            "num_heads": 4,
             "out_proj_bias": false,
             "qkv_proj_bias": false,
             "rotary_emb_dim": 16
@@ -49,8 +49,8 @@
         "attn_cfg": {
             "causal": true,
             "d_conv": 4,
-            "head_dim": 64,
-            "num_heads": 8,
+            "head_dim": 256,
+            "num_heads": 4,
             "out_proj_bias": false,
             "qkv_proj_bias": false,
             "rotary_emb_dim": 16

@@ -387,9 +387,7 @@ class scMambaLMHeadModel(nn.Module, GenerationMixin):
         d_feature_omics2: int,
         normalize: bool=False,
         pool: str='last token',
-        initializer_cfg=None,
-        device=None,
-        dtype=None,
+        device=None
     ) -> None:
         # self.config = config
         super().__init__()
