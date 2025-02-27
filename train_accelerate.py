@@ -72,6 +72,8 @@ def main(args):
         use_key="X",
         filter_gene_by_counts=False,
         filter_cell_by_counts=False,
+        tfidf=True,
+        result_tfidf_key="X_tfidf",
         binarize=True,
         result_binarize_key="X_binarized",
         subset_hvg=args.n_top_peaks,

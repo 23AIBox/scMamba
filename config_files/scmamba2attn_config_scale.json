@@ -4,7 +4,7 @@
         "patch_size": 256,
         "d_intermediate": 512,
         "n_layer": 14,
-        "d_embedding": 64,
+        "d_embedding": 16,
         "ssm_cfg": {
             "layer": "Mamba2",
             "d_state": 128,
@@ -34,7 +34,7 @@
         "patch_size": 256,
         "d_intermediate": 512,
         "n_layer": 16,
-        "d_embedding": 64,
+        "d_embedding": 16,
         "ssm_cfg": {
             "layer": "Mamba2",
             "d_state": 128,

@@ -8,6 +8,7 @@ from scipy.sparse import issparse
 import scanpy as sc
 from scanpy.get import _get_obs_rep, _set_obs_rep
 from anndata import AnnData
+from sklearn.feature_extraction.text import TfidfTransformer
 
 from scmamba2 import logger
 
@@ -248,6 +249,8 @@ class scATACseqPreprocessor:
         use_key: Optional[str] = None,
         filter_gene_by_counts: Union[int, bool] = False,
         filter_cell_by_counts: Union[int, bool] = False,
+        tfidf: bool = True,
+        result_tfidf_key: Optional[str] = "X_tfidf",
         binarize: bool = True,
         result_binarize_key: Optional[str] = "X_binarized",
         subset_hvg: Union[int, bool] = False,
@@ -292,6 +295,8 @@ class scATACseqPreprocessor:
         self.use_key = use_key
         self.filter_gene_by_counts = filter_gene_by_counts
         self.filter_cell_by_counts = filter_cell_by_counts
+        self.tfidf = tfidf
+        self.result_tfidf_key = result_tfidf_key
         self.binarize = binarize
         self.result_binarize_key = result_binarize_key
         self.subset_hvg = subset_hvg
@@ -342,7 +347,17 @@ class scATACseqPreprocessor:
                 else None,
             )
 
-        # step 3: binarize
+        # step 3: TF-IDF transform
+        if self.tfidf:
+            logger.info("TF-IDF transforming scATAC-seq cell-by-peak matrix ...")
+            tfidf_X = adata.X.copy()
+            tfidf = TfidfTransformer()
+            tfidf_X = tfidf.fit_transform(tfidf_X).toarray()
+            key_to_process = self.result_tfidf_key or key_to_process
+            _set_obs_rep(adata, tfidf_X, layer=key_to_process)
+            sc.pp.scale(adata, layer=key_to_process)
+
+        # step 4: binarize
         if self.binarize:
             logger.info("Binarizing scATAC-seq cell-by-peak matrix ...")
             binary = adata.X.copy()
@@ -350,7 +365,7 @@ class scATACseqPreprocessor:
             key_to_process = self.result_binarize_key or key_to_process
             _set_obs_rep(adata, binary, layer=key_to_process)
 
-        # step 4: subset hvg
+        # step 5: subset hvg
         if self.subset_hvg:
             logger.info("Subsetting highly variable genes ...")
             if batch_key is None:

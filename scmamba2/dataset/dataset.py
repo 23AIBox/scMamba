@@ -27,7 +27,7 @@ class MultiomeDataset(Dataset):
     def __getitem__(self, index):
         if self.use_layer1 == "X_pca":
             x = self.mdata[self.omics1].obsm["X_pca"][index]
-        elif self.use_layer1 == "X_binned":
+        elif self.use_layer1 == "X_binned" or self.use_layer1 == "X_tfidf":
             x = self.mdata[self.omics1].layers[self.use_layer1][index].squeeze()
         elif self.use_layer1 != "X":
             x = self.mdata[self.omics1].layers[self.use_layer1][index].toarray().squeeze()
@@ -36,7 +36,7 @@ class MultiomeDataset(Dataset):
         
         if self.use_layer2 == "X_lsi":
             y = self.mdata[self.omics2].obsm["X_lsi"][index]
-        elif self.use_layer2 == "X_binned":
+        elif self.use_layer2 == "X_binned" or self.use_layer2 == "X_tfidf":
             y = self.mdata[self.omics2].layers[self.use_layer2][index].squeeze()
         elif self.use_layer2 != "X":
             y = self.mdata[self.omics2].layers[self.use_layer2][index].toarray().squeeze()

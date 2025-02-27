@@ -197,7 +197,7 @@ def biology_conservation(
         nmi_score = NMI(adata.obs['cell_type'].values, adata.obs['leiden'].values)
         # ari_score = metrics.adjusted_rand_score(encoded_original_labels, cluster_labels)
         # nmi_score = metrics.normalized_mutual_info_score(encoded_original_labels, cluster_labels)
-        MAP = mean_average_precision(adata.X, cell_type)
+        MAP = mean_average_precision(adata.obsm['X_umap'], cell_type)
         ASW_celltype = avg_silhouette_width_cell_type(adata.obsm['X_umap'], cell_type)
 
     return {

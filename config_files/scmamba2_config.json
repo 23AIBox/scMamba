@@ -1,6 +1,6 @@
 {
     "decoder1": {
-        "d_model": 512,
+        "d_model": 1024,
         "patch_size": 256,
         "d_intermediate": 512,
         "n_layer": 8,
@@ -30,7 +30,7 @@
         "fused_add_norm": true
     },
     "decoder2": {
-        "d_model": 512,
+        "d_model": 1024,
         "patch_size": 256,
         "d_intermediate": 512,
         "n_layer": 12,
