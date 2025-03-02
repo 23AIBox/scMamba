@@ -37,8 +37,8 @@ CUDA_VISIBLE_DEVICES=6,7 accelerate launch --num_processes=2 \
         --data_dir datasets/multiome/SHAREV2_BMMC.h5mu  \
         --n_top_genes 10240 \
         --n_top_peaks 20480 \
-        --PCA True \
-        --LSI True \
+        --PCA 2500 \
+        --LSI 3000 \
         --config config_files/scmamba2_config.json \
         --epoch_nums 80 \
         --results_dir results/benckmark
@@ -50,8 +50,8 @@ python inference_accelerate.py \
     --data_dir datasets/multiome/SHAREV2_BMMC.h5mu  \
     --n_top_genes 10240 \
     --n_top_peaks 20480 \
-    --PCA True \
-    --LSI True \
+    --PCA 2500 \
+    --LSI 3000 \
     --config config_files/scmamba2_config.json \
     --epoch_nums 80 \
     --results_dir results/benckmark

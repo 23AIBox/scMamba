@@ -90,16 +90,16 @@ def main(args):
     # whether use PCA and LSI to process X matrix
     data_name = os.path.basename(args.data_dir).split('.')[0]
     if args.PCA and args.LSI:
-        if os.path.exists(f'datasets/multiome/{data_name}_pca_2500.npy'):
+        if os.path.exists(f'datasets/multiome/{data_name}_pca_{args.PCA}.npy'):
             mdata['rna'].obsm['X_pca'] = \
-                np.load(f'datasets/multiome/{data_name}_pca_2500.npy')
+                np.load(f'datasets/multiome/{data_name}_pca_{args.PCA}.npy')
         else:
-            sc.pp.pca(mdata['rna'], n_comps=2500)
-        if os.path.exists(f'datasets/multiome/{data_name}_lsi_2500.npy'):
+            sc.pp.pca(mdata['rna'], n_comps=args.PCA)
+        if os.path.exists(f'datasets/multiome/{data_name}_lsi_{args.LSI}.npy'):
             mdata['atac'].obsm['X_lsi'] = \
-                np.load(f'datasets/multiome/{data_name}_lsi_2500.npy')
+                np.load(f'datasets/multiome/{data_name}_lsi_{args.LSI}.npy')
         else:
-            lsi(mdata['atac'], n_components=2500, n_iter=15)
+            lsi(mdata['atac'], n_components=args.LSI, n_iter=15)
             
         d_rna_feature = mdata.mod['rna'].obsm['X_pca'].shape[1]
         d_atac_feature = mdata.mod['atac'].obsm['X_lsi'].shape[1]
@@ -216,8 +216,8 @@ if __name__ == "__main__":
     parser.add_argument("--data_dir", type=str, default="datasets/multiome/fetal.h5mu")
     parser.add_argument("--n_top_genes", type=int, default=10240)
     parser.add_argument("--n_top_peaks", type=int, default=20480)
-    parser.add_argument("--LSI", type=bool, default=False)
-    parser.add_argument("--PCA", type=bool, default=False)
+    parser.add_argument("--PCA", type=int, default=0)
+    parser.add_argument("--LSI", type=int, default=0)
     parser.add_argument("--cell_numbers", type=int, default=0)
     parser.add_argument("--binning", type=int, default=0)
     parser.add_argument("--pool", type=str, default='last token')
