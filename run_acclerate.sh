@@ -19,7 +19,7 @@ which deepspeed
 which python
 
 # The new versions of CUDA and PyTorch require the following environment to be set up
-# - NCCL_SOCKET_IFNAME. to find the proper value, using command line: `ip mouse_skindr`
+# - NCCL_SOCKET_IFNAME. to find the proper value, using command line: `ip addr`
 # - NCCL_IB_DISABLE. if the network-interface is not InfiniBand, set NCCL_IB_DISABLE=1
 export NCCL_SOCKET_IFNAME="lo"    # `lo` refers to loopback interface which applies to single machine
 export NCCL_IB_DISABLE=1        # disable IB communication
@@ -28,27 +28,31 @@ export NCCL_P2P_DISABLE=1       # disable P2P communication
 unset CUDA_VISIBLE_DEVICES
 export PORT=$(python -Bu get_tcp_port.py 2>/dev/null | grep 'Distributed TCP PORT' | awk -F'|' '{print $2}' | xargs -n1 echo | head -n1)
 
-rm -rf results/benckmark/mouse_skinbatchsize64projection_dim64/checkpoints
+rm -rf results/benckmark/SHAREV2_BMMCbatchsize128projection_dim64/checkpoints
 
-CUDA_VISIBLE_DEVICES=3,4 accelerate launch --num_processes=2 \
+CUDA_VISIBLE_DEVICES=6,7 accelerate launch --num_processes=2 \
     --config_file config_files/accelerate_config.yaml --main_process_port $PORT \
     train_accelerate.py \
-        --batch_size 64 \
-        --data_dir datasets/multiome/mouse_skin.h5mu  \
+        --batch_size 128 \
+        --data_dir datasets/multiome/SHAREV2_BMMC.h5mu  \
         --n_top_genes 10240 \
         --n_top_peaks 20480 \
+        --PCA True \
+        --LSI True \
         --config config_files/scmamba2_config.json \
-        --epoch_nums 70 \
+        --epoch_nums 80 \
         --results_dir results/benckmark
 
 python inference_accelerate.py \
-    --device cuda:3 \
-    --checkpoints results/benckmark/mouse_skinbatchsize64projection_dim64/checkpoints/scMamba.pt \
-    --batch_size 64 \
-    --data_dir datasets/multiome/mouse_skin.h5mu  \
+    --device cuda:7 \
+    --checkpoints results/benckmark/SHAREV2_BMMCbatchsize128projection_dim64/checkpoints/scMamba.pt \
+    --batch_size 128 \
+    --data_dir datasets/multiome/SHAREV2_BMMC.h5mu  \
     --n_top_genes 10240 \
     --n_top_peaks 20480 \
+    --PCA True \
+    --LSI True \
     --config config_files/scmamba2_config.json \
-    --epoch_nums 70 \
+    --epoch_nums 80 \
     --results_dir results/benckmark
 

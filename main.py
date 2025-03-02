@@ -6,7 +6,9 @@ import argparse
 import json
 import pandas as pd
 import numpy as np
+import scanpy as sc
 import muon as mu
+
 
 import torch
 from torch import optim
@@ -14,6 +16,7 @@ from torch.utils.data import DataLoader
 from tensorboardX import SummaryWriter
 
 from scmamba2.preprocess import Preprocessor, scATACseqPreprocessor
+from scmamba2.utils.process import lsi
 from scmamba2.dataset.dataset import MultiomeDataset
 from scmamba2.models import scMambaConfig, scMambaLMHeadModel
 from scmamba2.loss import CLIPLoss, ContrastiveLoss
@@ -124,11 +127,17 @@ if __name__ == "__main__":
     mu.pp.intersect_obs(mdata)
     data_name = os.path.basename(args.data_dir).split('.')[0]
     if args.PCA and args.LSI:
-        mdata['rna'].obsm['X_pca'] = \
-            np.load(f'datasets/multiome/{data_name}_pca_2500.npy')
-        
-        mdata['atac'].obsm['X_lsi'] = \
-            np.load(f'datasets/multiome/{data_name}_lsi_2500.npy')
+        if os.path.exists(f'datasets/multiome/{data_name}_pca_2500.npy'):
+            mdata['rna'].obsm['X_pca'] = \
+                np.load(f'datasets/multiome/{data_name}_pca_2500.npy')
+        else:
+            sc.pp.pca(mdata['rna'], n_comps=2500)
+        if os.path.exists(f'datasets/multiome/{data_name}_lsi_2500.npy'):
+            mdata['atac'].obsm['X_lsi'] = \
+                np.load(f'datasets/multiome/{data_name}_lsi_2500.npy')
+        else:
+            lsi(mdata['atac'], n_components=2500, n_iter=15)
+
         d_rna_feature = mdata.mod['rna'].obsm['X_pca'].shape[1]
         d_atac_feature = mdata.mod['atac'].obsm['X_lsi'].shape[1]
     else:
@@ -136,10 +145,11 @@ if __name__ == "__main__":
         d_atac_feature = mdata.mod['atac'].X.shape[1]
 
     # Prepare dataset
+    
     train_dataset = MultiomeDataset(
         mdata, 
-        "X_log1p" if not args.binning else 'X_binned', 
-        "X_binarized"
+        "X_pca" if not args.binning else 'X_binned', 
+        "X_binarized" if not args.LSI else 'X_lsi'
     )
 
     # load configure file

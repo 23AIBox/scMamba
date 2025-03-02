@@ -20,6 +20,7 @@ from torch import optim
 from tensorboardX import SummaryWriter
 
 from scmamba2.preprocess import Preprocessor, scATACseqPreprocessor
+from scmamba2.utils.process import lsi
 from scmamba2.dataset.dataset import MultiomeDataset
 from scmamba2.models.scmamba import scMambaLMHeadModel
 from scmamba2.models.config_scmamba import scMambaConfig
@@ -72,7 +73,7 @@ def main(args):
         use_key="X",
         filter_gene_by_counts=False,
         filter_cell_by_counts=False,
-        tfidf=True,
+        tfidf=False,
         result_tfidf_key="X_tfidf",
         binarize=True,
         result_binarize_key="X_binarized",
@@ -86,14 +87,33 @@ def main(args):
     mdata.mod['atac'] = atac
     mu.pp.intersect_obs(mdata)
     
-    d_rna_feature = mdata.mod['rna'].X.shape[1]
-    d_atac_feature = mdata.mod['atac'].X.shape[1]
+    # whether use PCA and LSI to process X matrix
+    data_name = os.path.basename(args.data_dir).split('.')[0]
+    if args.PCA and args.LSI:
+        if os.path.exists(f'datasets/multiome/{data_name}_pca_2500.npy'):
+            mdata['rna'].obsm['X_pca'] = \
+                np.load(f'datasets/multiome/{data_name}_pca_2500.npy')
+        else:
+            sc.pp.pca(mdata['rna'], n_comps=2500)
+        if os.path.exists(f'datasets/multiome/{data_name}_lsi_2500.npy'):
+            mdata['atac'].obsm['X_lsi'] = \
+                np.load(f'datasets/multiome/{data_name}_lsi_2500.npy')
+        else:
+            lsi(mdata['atac'], n_components=2500, n_iter=15)
+            
+        d_rna_feature = mdata.mod['rna'].obsm['X_pca'].shape[1]
+        d_atac_feature = mdata.mod['atac'].obsm['X_lsi'].shape[1]
+    else:
+        d_rna_feature = mdata.mod['rna'].X.shape[1]
+        d_atac_feature = mdata.mod['atac'].X.shape[1]
+    # d_rna_feature = mdata.mod['rna'].X.shape[1]
+    # d_atac_feature = mdata.mod['atac'].X.shape[1]
     
     # Prepare data loaders
     train_dataset = MultiomeDataset(
         mdata, 
-        "X_log1p" if not args.binning else 'X_binned', 
-        "X_binarized"
+        "X_pca" if not args.binning else 'X_binned', 
+        "X_lsi"
     )
     train_dataloader = DataLoader(
         train_dataset, 
@@ -194,8 +214,10 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=64)
     parser.add_argument("--num_workers", type=int, default=0)
     parser.add_argument("--data_dir", type=str, default="datasets/multiome/fetal.h5mu")
-    parser.add_argument("--n_top_genes", type=int, default=20000)
-    parser.add_argument("--n_top_peaks", type=int, default=40000)
+    parser.add_argument("--n_top_genes", type=int, default=10240)
+    parser.add_argument("--n_top_peaks", type=int, default=20480)
+    parser.add_argument("--LSI", type=bool, default=False)
+    parser.add_argument("--PCA", type=bool, default=False)
     parser.add_argument("--cell_numbers", type=int, default=0)
     parser.add_argument("--binning", type=int, default=0)
     parser.add_argument("--pool", type=str, default='last token')
