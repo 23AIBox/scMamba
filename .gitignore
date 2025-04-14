@@ -17,4 +17,4 @@ datasets.txt
 goldendatasets.txt
 train_ddp.py
 cal_metrics.ipynb
-tutorials
+tutorials/*
