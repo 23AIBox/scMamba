@@ -19,17 +19,11 @@ from torch.utils.data import DataLoader
 from torch import optim
 from tensorboardX import SummaryWriter
 
-from scmamba2.preprocess import Preprocessor, scATACseqPreprocessor
-from scmamba2.dataset.dataset import MultiomeModule, MultiomeDataset
-# from scmamba2.models import MambaLMHeadModel, MambaConfig, scMambaLMHeadModel
+from scmamba2.preprocess import Preprocessor
+from scmamba2.dataset.dataset import MultiomeDataset
 from scmamba2.models import scMambaConfig
 from scmamba2.models.scmamba import scMambaLMHeadModel
-from scmamba2.loss import CLIPLoss, ContrastiveLoss
-from scmamba2.trainer import Trainer
-from scmamba2.utils.metrics import (
-    biology_conservation, omics_mixing, mean_F1_silhouette
-)
-from scmamba2.utils.plot import plot_paired_umap
+from scmamba2.loss import ContrastiveLoss
 from scmamba2 import logger
 
 
@@ -114,10 +108,7 @@ def main(args):
         pool='first token'
     )
     # Loss and optimizer
-    criterion = CLIPLoss(
-        requires_grad=args.requires_grad, logit_scale=args.logit_scale
-    )
-    criterion = ContrastiveLoss()
+    criterion = ContrastiveLoss(cos_simi_scale=args.cos_simi_scale)
     optimizer = optim.AdamW(
         model.parameters(), lr=args.lr, weight_decay=args.weight_decay
     )
@@ -133,7 +124,7 @@ def main(args):
     # Set up output directories and logging
     data_name = os.path.basename(args.data_dir).split('.')[0]
     out_dir = os.path.join(args.results_dir, data_name)
-    out_dir = f"{out_dir}batchsize{args.batch_size}projection_dim{config_decoder1.d_embedding}"
+    out_dir = f"{out_dir}batchsize{args.batch_size}emb_dim{config_decoder1.d_embedding}"
     checkpoints_path = os.path.join(out_dir, 'checkpoints')
     os.makedirs(out_dir, exist_ok=True)
     os.makedirs(checkpoints_path, exist_ok=True)
@@ -187,12 +178,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="scMamba")
     parser.add_argument("--seed", default=42, type=int)
     parser.add_argument("--checkpoint", type=str, default=None)
-    parser.add_argument("--retrain", type=bool, default=False)
     parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--num_workers", type=int, default=0)
-    parser.add_argument("--data_dir", type=str, default="datasets/multiome/cite_BMMC_2.h5mu")
+    parser.add_argument("--data_dir", type=str, default="datasets/multiome/cite_BMMC_S1.h5mu")
     parser.add_argument("--batch_key", type=str, default=None)
-    parser.add_argument("--n_top_genes", type=int, default=10000)
+    parser.add_argument("--n_top_genes", type=int, default=0)
     parser.add_argument("--binning", type=int, default=0)
     parser.add_argument("--config", type=str, default="config_files/scmamba2attn_config_rna_adt.json")
     parser.add_argument("--lr", type=float, default=5e-4)
@@ -201,9 +191,9 @@ if __name__ == "__main__":
     parser.add_argument("--hidden_dropout_prob", type=float, default=0.1)
     parser.add_argument("--requires_grad", action="store_true", default=True)
     parser.add_argument("--multi_batches", action="store_true", default=False)
-    parser.add_argument("--logit_scale", type=float, default=1)
+    parser.add_argument("--cos_simi_scale", type=float, default=1)
     parser.add_argument("--epoch_nums", type=int, default=100)
-    parser.add_argument("--results_dir", type=str, default='results/accelerate_results')
+    parser.add_argument("--results_dir", type=str, default='results')
     
     args = parser.parse_args()
     main(args)
