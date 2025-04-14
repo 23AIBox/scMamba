@@ -59,7 +59,7 @@ python inference_accelerate.py \
     --checkpoints results/checkpoints/scMamba_PBMC.pt \
     --batch_size 128 \
     --data_dir datasets/multiome/PBMC.h5mu  \
-    --config config_files/model.json \
+    --config config_files/scmamba2_config.json \
     --results_dir results/benckmark
 ```
 
