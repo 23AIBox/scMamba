@@ -59,7 +59,7 @@ def main(args):
         subset_hvg=args.n_top_genes,
         hvg_use_key=None,
         hvg_flavor="seurat_v3",
-        binning=51,
+        binning=args.binning,
         result_binned_key="X_binned",
     )
     preprocessor_rna(rna, batch_key=args.batch_key)
@@ -76,7 +76,7 @@ def main(args):
         result_log1p_key="X_log1p",
         subset_hvg=False,  # 5. whether to subset the raw data to highly variable genes
         hvg_flavor=None,
-        binning=51,  # 6. whether to bin the raw data and to what number of bins
+        binning=args.binning,  # 6. whether to bin the raw data and to what number of bins
         result_binned_key="X_binned",  # the key in adata.layers to store the binned data
     )
     preprocessor_protein(protein, batch_key=None)
@@ -85,16 +85,6 @@ def main(args):
     
     d_rna_feature = mdata.mod['rna'].X.shape[1]
     d_adt_feature = mdata.mod['adt'].X.shape[1]
-    
-    # Prepare data loaders
-    train_dataset = MultiomeDataset(mdata, "X_binned", "X_binned", omics1='rna', omics2='adt')
-    train_dataloader = DataLoader(
-        train_dataset, 
-        batch_size=args.batch_size, 
-        shuffle=True,
-        num_workers=args.num_workers,
-        pin_memory=True,
-    )
     
     with open(args.config, 'r') as file:
         config = json.load(file)
@@ -118,7 +108,13 @@ def main(args):
     out_dir = f"{out_dir}batchsize{args.batch_size}projection_dim{config_decoder1.d_embedding}"
     os.makedirs(out_dir, exist_ok=True)
 
-    dataset = MultiomeDataset(mdata, "X_binned", "X_binned", omics1='rna', omics2='adt')
+    dataset = MultiomeDataset(
+        mdata, 
+        "X_binned" if args.binning else 'X_log1p', 
+        "X_binned" if args.binning else 'X', 
+        omics1='rna', 
+        omics2='adt'
+    )
     # Test the model
     test_loader = DataLoader(
         dataset, 
@@ -186,7 +182,7 @@ if __name__ == "__main__":
     parser.add_argument("--data_dir", type=str, default="datasets/multiome/cite_BMMC_2.h5mu")
     parser.add_argument("--batch_key", type=str, default=None)
     parser.add_argument("--n_top_genes", type=int, default=10000)
-    parser.add_argument("--n_top_peaks", type=int, default=None)
+    parser.add_argument("--binning", type=int, default=0)
     parser.add_argument("--config", type=str, default="config_files/scmamba2attn_config_rna_adt.json")
     parser.add_argument("--lr", type=float, default=5e-4)
     parser.add_argument("--weight_decay", type=float, default=0.05)

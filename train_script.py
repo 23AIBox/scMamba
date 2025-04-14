@@ -32,7 +32,7 @@ if __name__ == "__main__":
         default=None
     )
     parser.add_argument("--Retraining", type=bool, default=True)
-    parser.add_argument("--device", type=str, default='cuda:0')
+    parser.add_argument("--device", type=str, default='cuda:1')
     parser.add_argument("--gpu_ids", type=list, default=[0])
 
     # DataModule
@@ -42,8 +42,8 @@ if __name__ == "__main__":
         "--data_dir", type=str, default="datasets/multiome/PBMC10k.h5mu"
     )
     parser.add_argument("--backed", action="store_true", default=False)
-    parser.add_argument("--n_top_genes", type=int, default=10240)
-    parser.add_argument("--n_top_peaks", type=int, default=20480)
+    parser.add_argument("--n_top_genes", type=int, default=None)
+    parser.add_argument("--n_top_peaks", type=int, default=None)
     parser.add_argument("--LSI", type=bool, default=False)
     parser.add_argument("--PCA", type=bool, default=False)
     parser.add_argument("--mask", type=float, default=None)
@@ -51,7 +51,7 @@ if __name__ == "__main__":
 
     # Module
     parser.add_argument("--pool", type=str, default='last token')
-    parser.add_argument("--config", type=str, default="config_files/scmamba2_config.json")
+    parser.add_argument("--config", type=str, default="config_files/scmamba2attn_config_scale.json")
     parser.add_argument("--lr", type=float, default=1.5e-4)
     parser.add_argument("--weight_decay", type=float, default=0.05)
     parser.add_argument("--dropout", type=float, default=0.1)
@@ -111,6 +111,8 @@ if __name__ == "__main__":
         use_key="X",  # the key in adata.layers to use as raw data
         filter_gene_by_counts=False,  # step 1
         filter_cell_by_counts=False,  # step 2
+        tfidf=False,
+        result_tfidf_key="X_tfidf",
         binarize=True,  # 3. whether to binarize the raw data
         result_binarize_key="X_binarized", # the key in adata.layers to store the binarized data
         subset_hvg=args.n_top_peaks,  # 4. whether to subset the raw data to highly variable genes
@@ -149,6 +151,9 @@ if __name__ == "__main__":
         pool=args.pool,
         device=device
     ).to(device)
+
+    total_params = sum(p.numel() for p in model.parameters())
+    print(f"Total Parameters: {total_params}")
 
     if torch.cuda.device_count() > 1: 
         print("Let's use", len(gpu_ids), "GPUs!")

@@ -30,7 +30,7 @@ export PORT=$(python -Bu get_tcp_port.py 2>/dev/null | grep 'Distributed TCP POR
 
 rm -rf results/scale/fetalbatchsize64projection_dim64/checkpoints
 
-CUDA_VISIBLE_DEVICES=2,3 accelerate launch \
+CUDA_VISIBLE_DEVICES=6,7 accelerate launch \
     --num_processes=2 \
     --main_process_port $PORT\
     --config_file config_files/accelerate_config.yaml \
@@ -38,20 +38,22 @@ CUDA_VISIBLE_DEVICES=2,3 accelerate launch \
         --batch_size 64 \
         --lr 5e-4 \
         --data_dir datasets/multiome/fetal_sample/fetal.h5mu \
-        --n_top_genes 10240 \
-        --n_top_peaks 20480 \
+        --n_top_genes 40000 \
+        --n_top_peaks 102400 \
         --config config_files/scmamba2attn_config_scale.json \
+        --normalize \
         --epoch_nums 80 \
-        --results_dir results/scale
+        --results_dir results/scale/all
 
 python inference_accelerate.py \
-    --device cuda:2 \
-    --checkpoints results/scale/fetalbatchsize64projection_dim64/checkpoints/scMamba.pt \
+    --device cuda:6 \
+    --checkpoints results/scale/all/fetalbatchsize64projection_dim16/checkpoints/scMamba.pt \
     --batch_size 64 \
     --lr 5e-4 \
     --data_dir datasets/multiome/fetal_sample/fetal.h5mu \
-    --n_top_genes 10240 \
-    --n_top_peaks 20480 \
+    --n_top_genes 40000 \
+    --n_top_peaks 102400 \
     --config config_files/scmamba2attn_config_scale.json \
+    --normalize \
     --epoch_nums 80 \
-    --results_dir results/scale
+    --results_dir results/scale/all

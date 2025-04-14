@@ -297,10 +297,10 @@ class MambaLMHeadModel(nn.Module, GenerationMixin):
         elif self.pool == 'first token':
             hidden_states = hidden_states[:, 0]
         
-        if self.normalize:
-            hidden_states = hidden_states / torch.linalg.norm(hidden_states, ord=2, dim=-1, keepdim=True)
         hidden_states = self.active(hidden_states)
         lm_logits = self.lm_head(hidden_states)
+        if self.normalize:
+            lm_logits = lm_logits / torch.linalg.norm(lm_logits, ord=2, dim=-1, keepdim=True)
         return lm_logits
 
     def get_representaion(

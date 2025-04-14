@@ -2,7 +2,6 @@ import os
 import torch
 import muon as mu
 import scanpy as sc
-import episcanpy as epi
 import numpy as np
 import scipy
 from anndata import AnnData

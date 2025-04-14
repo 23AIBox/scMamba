@@ -87,17 +87,20 @@ def main(args):
 
     # whether use PCA and LSI to process X matrix
     data_name = os.path.basename(args.data_dir).split('.')[0]
+    data_path = os.path.dirname(args.data_dir)
     if args.PCA and args.LSI:
-        if os.path.exists(f'datasets/multiome/{data_name}_pca_{args.PCA}.npy'):
+        if os.path.exists(f'{data_path}/{data_name}_pca_{args.PCA}.npy'):
             mdata['rna'].obsm['X_pca'] = \
-                np.load(f'datasets/multiome/{data_name}_pca_{args.PCA}.npy')
+                np.load(f'{data_path}/{data_name}_pca_{args.PCA}.npy')
         else:
             sc.pp.pca(mdata['rna'], n_comps=args.PCA)
-        if os.path.exists(f'datasets/multiome/{data_name}_lsi_{args.LSI}.npy'):
+            np.save(f'{data_path}/{data_name}_pca_{args.PCA}.npy', mdata.mod['rna'].obsm['X_pca'])
+        if os.path.exists(f'{data_path}/{data_name}_lsi_{args.LSI}.npy'):
             mdata['atac'].obsm['X_lsi'] = \
-                np.load(f'datasets/multiome/{data_name}_lsi_{args.LSI}.npy')
+                np.load(f'{data_path}/{data_name}_lsi_{args.LSI}.npy')
         else:
             lsi(mdata['atac'], n_components=args.LSI, n_iter=15)
+            np.save(f'{data_path}/{data_name}_lsi_{args.LSI}.npy', mdata.mod['atac'].obsm['X_lsi'])
             
         d_rna_feature = mdata.mod['rna'].obsm['X_pca'].shape[1]
         d_atac_feature = mdata.mod['atac'].obsm['X_lsi'].shape[1]
@@ -119,7 +122,8 @@ def main(args):
         config_omics2=config_decoder2,
         d_feature_omics1=d_rna_feature,
         d_feature_omics2=d_atac_feature,
-        pool=args.pool
+        pool=args.pool,
+        normalize=args.normalize
     ).to(args.device)
 
     checkpoint = torch.load(args.checkpoints)
@@ -132,8 +136,8 @@ def main(args):
     
     dataset = MultiomeDataset(
         mdata, 
-        "X_pca" if not args.binning else 'X_binned', 
-        "X_lsi"
+        "X_log1p" if not args.PCA else 'X_pca', 
+        "X_binarized" if not args.LSI else 'X_lsi'
     )
     # Test the model
     test_loader = DataLoader(
@@ -153,7 +157,7 @@ def main(args):
             device=args.device,
             n_neighbors=30, 
             metric='cosine', 
-            min_dist=0.3, 
+            min_dist=0.5, 
             resolution=0.3
         )
         metrics = {}
@@ -212,7 +216,6 @@ if __name__ == "__main__":
     parser.add_argument("--weight_decay", type=float, default=0.05)
     parser.add_argument("--dropout", type=float, default=0.1)
     parser.add_argument("--hidden_dropout_prob", type=float, default=0.1)
-    parser.add_argument("--projection_dim", type=int, default=128)
     parser.add_argument("--requires_grad", action="store_true", default=True)
     parser.add_argument("--normalize", action="store_true", default=True)
     parser.add_argument("--fast_dev_run", action="store_true", default=False)

@@ -57,7 +57,7 @@ def main(args):
         subset_hvg=args.n_top_genes,
         hvg_use_key=None,
         hvg_flavor="seurat_v3",
-        binning=51,
+        binning=args.binning,
         result_binned_key="X_binned",
     )
     preprocessor_rna(rna, batch_key=args.batch_key)
@@ -74,7 +74,7 @@ def main(args):
         result_log1p_key="X_log1p",
         subset_hvg=False,  # 5. whether to subset the raw data to highly variable genes
         hvg_flavor=None,
-        binning=51,  # 6. whether to bin the raw data and to what number of bins
+        binning=args.binning,  # 6. whether to bin the raw data and to what number of bins
         result_binned_key="X_binned",  # the key in adata.layers to store the binned data
     )
     preprocessor_protein(protein, batch_key=None)
@@ -85,7 +85,13 @@ def main(args):
     d_adt_feature = mdata.mod['adt'].X.shape[1]
     
     # Prepare data loaders
-    train_dataset = MultiomeDataset(mdata, "X_binned", "X_binned", omics1='rna', omics2='adt')
+    train_dataset = MultiomeDataset(
+        mdata, 
+        "X_binned" if args.binning else 'X_log1p', 
+        "X_binned" if args.binning else 'X', 
+        omics1='rna', 
+        omics2='adt'
+    )
     train_dataloader = DataLoader(
         train_dataset, 
         batch_size=args.batch_size, 
@@ -187,7 +193,7 @@ if __name__ == "__main__":
     parser.add_argument("--data_dir", type=str, default="datasets/multiome/cite_BMMC_2.h5mu")
     parser.add_argument("--batch_key", type=str, default=None)
     parser.add_argument("--n_top_genes", type=int, default=10000)
-    parser.add_argument("--n_top_peaks", type=int, default=None)
+    parser.add_argument("--binning", type=int, default=0)
     parser.add_argument("--config", type=str, default="config_files/scmamba2attn_config_rna_adt.json")
     parser.add_argument("--lr", type=float, default=5e-4)
     parser.add_argument("--weight_decay", type=float, default=0.05)
@@ -195,7 +201,6 @@ if __name__ == "__main__":
     parser.add_argument("--hidden_dropout_prob", type=float, default=0.1)
     parser.add_argument("--requires_grad", action="store_true", default=True)
     parser.add_argument("--multi_batches", action="store_true", default=False)
-    parser.add_argument("--fast_dev_run", action="store_true", default=False)
     parser.add_argument("--logit_scale", type=float, default=1)
     parser.add_argument("--epoch_nums", type=int, default=100)
     parser.add_argument("--results_dir", type=str, default='results/accelerate_results')

@@ -14,7 +14,7 @@ fi
 unset __conda_setup
 # <<< conda initialize <<<
 
-conda activate mamba
+conda activate mamba2
 which deepspeed
 which python
 
@@ -37,8 +37,9 @@ CUDA_VISIBLE_DEVICES=4,6 accelerate launch --num_processes=2 \
         --data_dir datasets/multiome/cite_BMMC_s4_200.h5mu \
         --batch_key batch \
         --n_top_genes 0 \
-        --config config_files/scmamba2attn_config_rna_adt.json \
-        --epoch_nums 100 \
+        --binning 51 \
+        --config config_files/scmamba2_config_rna_adt.json \
+        --epoch_nums 80 \
         --results_dir results/benckmark
 
 python inference_rna_adt.py \
@@ -48,6 +49,7 @@ python inference_rna_adt.py \
     --data_dir datasets/multiome/cite_BMMC_s4_200.h5mu \
     --batch_key batch \
     --n_top_genes 0 \
-    --config config_files/scmamba2attn_config_rna_adt.json \
-    --epoch_nums 100 \
+    --binning 51 \
+    --config config_files/scmamba2_config_rna_adt.json \
+    --epoch_nums 80 \
     --results_dir results/benckmark 
