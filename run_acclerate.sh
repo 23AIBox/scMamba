@@ -28,29 +28,23 @@ export NCCL_P2P_DISABLE=1       # disable P2P communication
 unset CUDA_VISIBLE_DEVICES
 export PORT=$(python -Bu get_tcp_port.py 2>/dev/null | grep 'Distributed TCP PORT' | awk -F'|' '{print $2}' | xargs -n1 echo | head -n1)
 
-rm -rf results/benckmark/multiome_BMMCbatchsize128projection_dim16/checkpoints
+# rm -rf results/benckmark/PBMCbatchsize128projection_dim16/checkpoints
 
 CUDA_VISIBLE_DEVICES=6,7 accelerate launch --num_processes=2 \
     --config_file config_files/accelerate_config.yaml --main_process_port $PORT \
     train_accelerate.py \
-        --batch_size 128 \
-        --data_dir datasets/multiome/multiome_BMMC.h5mu  \
-        --n_top_genes 10240 \
-        --n_top_peaks 20480 \
-        --config config_files/model.json \
+        --batch_size 64 \
+        --data_dir datasets/multiome/PBMC.h5mu  \
+        --config config_files/scmamba2_config.json \
         --epoch_nums 80 \
         --results_dir results/benckmark
 
 python inference_accelerate.py \
     --device cuda:7 \
-    --checkpoints results/benckmark/multiome_BMMCbatchsize128projection_dim16/checkpoints/scMamba.pt \
-    --batch_size 128 \
-    --data_dir datasets/multiome/multiome_BMMC.h5mu  \
-    --n_top_genes 10240 \
-    --n_top_peaks 20480 \
-    --PCA 0 \
-    --LSI 0 \
-    --config config_files/model.json \
+    --checkpoints results/benckmark/PBMCbatchsize64emb_dim64/checkpoints/scMamba.pt \
+    --batch_size 64 \
+    --data_dir datasets/multiome/PBMC.h5mu  \
+    --config config_files/scmamba2_config.json \
     --epoch_nums 80 \
     --results_dir results/benckmark
 

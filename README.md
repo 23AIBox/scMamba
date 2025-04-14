@@ -50,7 +50,7 @@ pip install -e .
 
 The checkpoints for the scMamba model are available via dropbox. We might update our checkpoints from time to time.
 
-Inference example
+**Inference example**
 To perform inference with a pretrained model:
 
 ```bash
@@ -67,7 +67,7 @@ Make sure to adjust the paths to match your environment.
 
 ### Train
 
-To train the model from scratch using a single GPU:
+To train the model using a single GPU:
 
 ```bash
 python train_script.py --data_dir /datasets/PBMC10k.h5mu

@@ -131,7 +131,7 @@ def main(args):
 
     data_name = os.path.basename(args.data_dir).split('.')[0]
     out_dir = os.path.join(args.results_dir, data_name)
-    out_dir = f"{out_dir}batchsize{args.batch_size}projection_dim{config_decoder1.d_embedding}"
+    out_dir = f"{out_dir}batchsize{args.batch_size}emb_dim{config_decoder1.d_embedding}"
     os.makedirs(out_dir, exist_ok=True)
     
     dataset = MultiomeDataset(
@@ -204,11 +204,10 @@ if __name__ == "__main__":
                         help="batch size to be processed by one GPU in one step")
     parser.add_argument("--num_workers", type=int, default=6)
     parser.add_argument("--data_dir", type=str, default="datasets/multiome/fetal.h5mu")
-    parser.add_argument("--n_top_genes", type=int, default=10240)
-    parser.add_argument("--n_top_peaks", type=int, default=20480)
+    parser.add_argument("--n_top_genes", type=int, default=0)
+    parser.add_argument("--n_top_peaks", type=int, default=0)
     parser.add_argument("--PCA", type=int, default=0)
     parser.add_argument("--LSI", type=int, default=0)
-    parser.add_argument("--cell_numbers", type=int, default=0)
     parser.add_argument("--binning", type=int, default=0)
     parser.add_argument("--pool", type=str, default='last token')
     parser.add_argument("--config", type=str, default="config_files/scmamba2_config.json")
@@ -219,7 +218,6 @@ if __name__ == "__main__":
     parser.add_argument("--requires_grad", action="store_true", default=True)
     parser.add_argument("--normalize", action="store_true", default=True)
     parser.add_argument("--fast_dev_run", action="store_true", default=False)
-    parser.add_argument("--logit_scale", type=float, default=1)
     parser.add_argument("--epoch_nums", type=int, default=100)
     parser.add_argument("--results_dir", type=str, default='results/accelerate_results')
     

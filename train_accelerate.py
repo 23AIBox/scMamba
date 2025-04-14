@@ -45,11 +45,6 @@ def main(args):
 
     # Load data
     mdata = mu.read(args.data_dir)
-    if args.cell_numbers:
-        selected_cells = np.random.choice(
-            mdata.obs.index, size=args.cell_numbers, replace=False
-        )
-        mdata = mdata[selected_cells, :].copy()
     rna = mdata.mod['rna'].copy()
     preprocessor_rna = Preprocessor(
         use_key="X",
@@ -109,8 +104,6 @@ def main(args):
     else:
         d_rna_feature = mdata.mod['rna'].X.shape[1]
         d_atac_feature = mdata.mod['atac'].X.shape[1]
-    # d_rna_feature = mdata.mod['rna'].X.shape[1]
-    # d_atac_feature = mdata.mod['atac'].X.shape[1]
     
     # Prepare data loaders
     train_dataset = MultiomeDataset(
@@ -141,10 +134,9 @@ def main(args):
         normalize=args.normalize
     )
     # Loss and optimizer
-    criterion = CLIPLoss(
-        requires_grad=args.requires_grad, logit_scale=args.logit_scale
+    criterion = ContrastiveLoss(
+        cos_simi_scale=args.cos_simi_scale
     )
-    criterion = ContrastiveLoss()
     optimizer = optim.AdamW(
         model.parameters(), lr=args.lr, weight_decay=args.weight_decay
     )
@@ -160,7 +152,7 @@ def main(args):
     # Set up output directories and logging
     data_name = os.path.basename(args.data_dir).split('.')[0]
     out_dir = os.path.join(args.results_dir, data_name)
-    out_dir = f"{out_dir}batchsize{args.batch_size}projection_dim{config_decoder1.d_embedding}"
+    out_dir = f"{out_dir}batchsize{args.batch_size}emb_dim{config_decoder1.d_embedding}"
     checkpoints_path = os.path.join(out_dir, 'checkpoints')
     os.makedirs(out_dir, exist_ok=True)
     os.makedirs(checkpoints_path, exist_ok=True)
@@ -197,8 +189,8 @@ def main(args):
             loop.set_postfix(loss=loss.item())
         writer.add_scalar("train loss", runing_loss / len(train_dataloader), epoch)
         
-        if (epoch + 1) % 10 == 0:
-            accelerator.save_state(output_dir=checkpoints_path)
+        # if (epoch + 1) % 10 == 0:
+        #     accelerator.save_state(output_dir=checkpoints_path)
         writer.close()
     accelerator.wait_for_everyone()
     accelerator.end_training()
@@ -214,15 +206,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="scMamba")
     parser.add_argument("--seed", default=42, type=int)
     parser.add_argument("--checkpoint", type=str, default=None)
-    parser.add_argument("--retrain", type=bool, default=False)
     parser.add_argument("--batch_size", type=int, default=64)
     parser.add_argument("--num_workers", type=int, default=0)
-    parser.add_argument("--data_dir", type=str, default="datasets/multiome/fetal.h5mu")
-    parser.add_argument("--n_top_genes", type=int, default=10240)
-    parser.add_argument("--n_top_peaks", type=int, default=20480)
+    parser.add_argument("--data_dir", type=str, default="datasets/multiome/PBMC.h5mu")
+    parser.add_argument("--n_top_genes", type=int, default=0)
+    parser.add_argument("--n_top_peaks", type=int, default=0)
     parser.add_argument("--PCA", type=int, default=0)
     parser.add_argument("--LSI", type=int, default=0)
-    parser.add_argument("--cell_numbers", type=int, default=0)
     parser.add_argument("--binning", type=int, default=0)
     parser.add_argument("--pool", type=str, default='last token')
     parser.add_argument("--config", type=str, default="config_files/scmamba2_config.json")
@@ -233,9 +223,9 @@ if __name__ == "__main__":
     parser.add_argument("--normalize", action="store_true", default=False)
     parser.add_argument("--requires_grad", action="store_true", default=True)
     parser.add_argument("--fast_dev_run", action="store_true", default=False)
-    parser.add_argument("--logit_scale", type=float, default=1)
-    parser.add_argument("--epoch_nums", type=int, default=100)
-    parser.add_argument("--results_dir", type=str, default='results/accelerate_results')
+    parser.add_argument("--cos_simi_scale", type=float, default=1)
+    parser.add_argument("--epoch_nums", type=int, default=80)
+    parser.add_argument("--results_dir", type=str, default='results')
     
     args = parser.parse_args()
     main(args)
