@@ -70,7 +70,7 @@ Make sure to adjust the paths to match your environment.
 
 ### Model Train
 
-#### single-GPU training
+#### Single-GPU training
 
 To train the model on a single GPU, execute the following command:
 
