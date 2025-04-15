@@ -78,7 +78,7 @@ To train the model on a single GPU, execute the following command:
 python train_script.py --device cuda:1 --data_dir /datasets/PBMC.h5mu
 ```
 
-#### Multi-GPU Training with Accelerate
+#### Multi-GPU Training with Accelerate (recommendation)
 
 We leverage the `accelerate` library in conjunction with `DeepSpeed` to facilitate efficient distributed training across multiple GPUs.
 

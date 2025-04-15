@@ -105,7 +105,7 @@ def main(args):
         config_omics2=config_decoder2,
         d_feature_omics1=d_rna_feature,
         d_feature_omics2=d_adt_feature,
-        pool='first token'
+        pool='last token'
     )
     # Loss and optimizer
     criterion = ContrastiveLoss(cos_simi_scale=args.cos_simi_scale)

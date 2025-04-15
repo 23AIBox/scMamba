@@ -2,7 +2,7 @@
     "decoder1": {
         "d_model": 512,
         "patch_size": 256,
-        "d_intermediate": 512,
+        "d_intermediate": 1024,
         "n_layer": 8,
         "d_embedding": 64,
         "ssm_cfg": {
@@ -32,7 +32,7 @@
     "decoder2": {
         "d_model": 512,
         "patch_size": 128,
-        "d_intermediate": 512,
+        "d_intermediate": 1024,
         "n_layer": 4,
         "d_embedding": 64,
         "ssm_cfg": {
