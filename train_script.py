@@ -42,7 +42,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=128)
     parser.add_argument("--num_workers", type=int, default=4)
     parser.add_argument(
-        "--data_dir", type=str, default="datasets/multiome/PBMC.h5mu"
+        "--data_dir", type=str, default="datasets/multiome/shareseq_BMMC.h5mu"
     )
     parser.add_argument("--n_top_genes", type=int, default=0)
     parser.add_argument("--n_top_peaks", type=int, default=0)
@@ -52,7 +52,7 @@ if __name__ == "__main__":
 
     # Module
     parser.add_argument("--pool", type=str, default='last token')
-    parser.add_argument("--config", type=str, default="config_files/scmamba2attn_config_scale.json")
+    parser.add_argument("--config", type=str, default="config_files/scmamba2_config.json")
     parser.add_argument("--lr", type=float, default=1.5e-4)
     parser.add_argument("--weight_decay", type=float, default=0.05)
     parser.add_argument("--dropout", type=float, default=0.1)

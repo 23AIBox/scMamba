@@ -75,7 +75,7 @@ Make sure to adjust the paths to match your environment.
 To train the model on a single GPU, execute the following command:
 
 ```bash
-python train_script.py --device cuda:1 --data_dir /datasets/PBMC10k.h5mu
+python train_script.py --device cuda:1 --data_dir /datasets/PBMC.h5mu
 ```
 
 #### Multi-GPU Training with Accelerate

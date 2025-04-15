@@ -160,7 +160,7 @@ def calculate_metrics(
         "ASW_celltype": float(ASW_celltype),
         
         "omics entropy mixing score": float(BEM_score),
-        "Seurat alignment score (omics)": float(SAS),
+        "Seurat alignment score": float(SAS),
         "Graph connectivity": float(GC),
         "ASW_omics": float(ASW_omics),
     }
@@ -180,7 +180,7 @@ def omics_mixing(
 
     return {
         "omics entropy mixing score": float(BEM_score),
-        "Seurat alignment score (omics)": float(SAS),
+        "Seurat alignment score": float(SAS),
         "Graph connectivity": float(GC),
         "ASW_omics": float(ASW_omics)
     }

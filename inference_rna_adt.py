@@ -166,7 +166,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=128, 
                         help="batch size to be processed by one GPU in one step")
     parser.add_argument("--num_workers", type=int, default=6)
-    parser.add_argument("--data_dir", type=str, default="datasets/multiome/cite_BMMC_S1.h5mu")
+    parser.add_argument("--data_dir", type=str, default="datasets/multiome/citeseq_BMMC_S1.h5mu")
     parser.add_argument("--batch_key", type=str, default=None)
     parser.add_argument("--n_top_genes", type=int, default=0)
     parser.add_argument("--binning", type=int, default=0)

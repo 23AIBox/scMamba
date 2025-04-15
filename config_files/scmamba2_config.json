@@ -3,7 +3,7 @@
         "d_model": 512,
         "patch_size": 256,
         "d_intermediate": 1024,
-        "n_layer": 8,
+        "n_layer": 10,
         "d_embedding": 64,
         "ssm_cfg": {
             "layer": "Mamba2",
