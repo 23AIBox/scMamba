@@ -2,7 +2,7 @@
     "decoder1": {
         "d_model": 512,
         "patch_size": 256,
-        "d_intermediate": 512,
+        "d_intermediate": 1024,
         "n_layer": 8,
         "d_embedding": 64,
         "ssm_cfg": {
@@ -13,8 +13,7 @@
             "ngroups": 1
         },
         "attn_layer_idx": [
-            2,
-            6
+            2
         ],
         "attn_cfg": {
             "causal": true,
@@ -32,7 +31,7 @@
     "decoder2": {
         "d_model": 512,
         "patch_size": 256,
-        "d_intermediate": 512,
+        "d_intermediate": 1024,
         "n_layer": 12,
         "d_embedding": 64,
         "ssm_cfg": {
@@ -43,8 +42,7 @@
             "ngroups": 1
         },
         "attn_layer_idx": [
-            2,
-            6
+            2
         ],
         "attn_cfg": {
             "causal": true,

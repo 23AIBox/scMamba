@@ -51,15 +51,15 @@ pip install -e .
 
 ### scMamba Model Ckeckpoints
 
-The checkpoints for the scMamba model are available via dropbox. We might update our checkpoints from time to time.
+The checkpoints and datasets for the scMamba model are available via [dropbox](https://www.dropbox.com/scl/fo/g64416xvv1fjd36l1z7nx/AKcB6XbOFHLPFHQX68TpGCQ?rlkey=1i3grodznoch33gihjqn74oc9&st=cvwgi5n5&dl=0). We might update our checkpoints from time to time.
 
 **Inference example**
 To perform inference with a pretrained model:
 
 ```bash
-python inference_accelerate.py \
+python inference.py \
     --device cuda:1 \
-    --checkpoints results/checkpoints/scMamba_PBMC.pt \
+    --checkpoints results/checkpoints/PBMC.pt \
     --batch_size 128 \
     --data_dir datasets/multiome/PBMC.h5mu  \
     --config config_files/scmamba2_config.json \

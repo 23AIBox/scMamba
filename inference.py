@@ -11,26 +11,16 @@ import scanpy as sc
 import muon as mu
 from tqdm import tqdm
 
-import deepspeed
-import deepspeed.comm
-
 import torch
-import torch.distributed as dist
-import torch.multiprocessing as mp
-from torch.nn.parallel import DistributedDataParallel as DDP
-from torch.utils.data import DataLoader, DistributedSampler
-from torch import optim
-from tensorboardX import SummaryWriter
+from torch.utils.data import DataLoader
 
 from scmamba2.preprocess import Preprocessor, scATACseqPreprocessor
 from scmamba2.utils.process import lsi
 from scmamba2.dataset.dataset import MultiomeDataset
 from scmamba2.models.scmamba import scMambaLMHeadModel
 from scmamba2.models.config_scmamba import scMambaConfig
-from scmamba2.loss import CLIPLoss
-from scmamba2.trainer import Trainer
 from scmamba2.utils.metrics import (
-    biology_conservation, omics_mixing, mean_F1_silhouette
+    biology_conservation, omics_mixing
 )
 from scmamba2 import logger
 
@@ -166,12 +156,12 @@ def main(args):
         biology_conservation_metrics, best_res= biology_conservation(
             concate_emb, concate_emb.obs['cell_type'].values
         )
-        logger.info("Calculating omics mixing metrics...")
+        logger.info("Calculating omics alignment metrics...")
         omics_mixing_metrics = omics_mixing(
             concate_emb, concate_emb.obs['cell_type'].values, concate_emb.obs['modality'].values
         )
         metrics_classified['biology conservation'] = biology_conservation_metrics
-        metrics_classified['omics mixing'] = omics_mixing_metrics
+        metrics_classified['omics alignment'] = omics_mixing_metrics
         
         metrics.update(biology_conservation_metrics)
         metrics.update(omics_mixing_metrics)

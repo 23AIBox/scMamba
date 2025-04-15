@@ -6,17 +6,20 @@ import argparse
 import json
 import pandas as pd
 import numpy as np
+import scanpy as sc
 import muon as mu
 
 import torch
 from torch import optim
 from torch.utils.data import DataLoader
+from transformers import get_cosine_schedule_with_warmup
 from tensorboardX import SummaryWriter
 
 from scmamba2.preprocess import Preprocessor, scATACseqPreprocessor
+from scmamba2.utils.process import lsi
 from scmamba2.dataset.dataset import MultiomeDataset
 from scmamba2.models import scMambaConfig, scMambaLMHeadModel
-from scmamba2.loss import CLIPLoss, ContrastiveLoss
+from scmamba2.loss import ContrastiveLoss
 from scmamba2.trainer import Trainer
 from scmamba2.utils.metrics import (
     biology_conservation, omics_mixing
@@ -123,9 +126,25 @@ if __name__ == "__main__":
     mdata.mod['atac'] = atac
     mu.pp.intersect_obs(mdata)
     data_name = os.path.basename(args.data_dir).split('.')[0]
+    if args.PCA and args.LSI:
+        if os.path.exists(f'datasets/multiome/{data_name}_pca_2500.npy'):
+            mdata['rna'].obsm['X_pca'] = \
+                np.load(f'datasets/multiome/{data_name}_pca_2500.npy')
+        else:
+            sc.pp.pca(mdata['rna'], n_comps=2500)
+        if os.path.exists(f'datasets/multiome/{data_name}_lsi_2500.npy'):
+            mdata['atac'].obsm['X_lsi'] = \
+                np.load(f'datasets/multiome/{data_name}_lsi_2500.npy')
+        else:
+            lsi(mdata['atac'], n_components=2500, n_iter=15)
 
-    d_rna_feature = mdata.mod['rna'].X.shape[1]
-    d_atac_feature = mdata.mod['atac'].X.shape[1]
+        d_rna_feature = mdata.mod['rna'].obsm['X_pca'].shape[1]
+        d_atac_feature = mdata.mod['atac'].obsm['X_lsi'].shape[1]
+    else:
+        d_rna_feature = mdata.mod['rna'].X.shape[1]
+        d_atac_feature = mdata.mod['atac'].X.shape[1]
+    # d_rna_feature = mdata.mod['rna'].X.shape[1]
+    # d_atac_feature = mdata.mod['atac'].X.shape[1]
 
     # Prepare dataset
     train_dataset = MultiomeDataset(
@@ -257,12 +276,12 @@ if __name__ == "__main__":
             biology_conservation_metrics, best_res= biology_conservation(
                 concate_emb, concate_emb.obs['cell_type'].values
             )
-            logger.info("Calculating omics mixing metrics...")
+            logger.info("Calculating omics alignment metrics...")
             omics_mixing_metrics = omics_mixing(
                 concate_emb, concate_emb.obs['cell_type'].values, concate_emb.obs['modality'].values
             )
             metrics_classified['biology conservation'] = biology_conservation_metrics
-            metrics_classified['omics mixing'] = omics_mixing_metrics
+            metrics_classified['omics alignment'] = omics_mixing_metrics
             
             metrics.update(biology_conservation_metrics)
             metrics.update(omics_mixing_metrics)

@@ -9,7 +9,6 @@ scmamba2/utils/__pycache__/*
 .vscode
 *log*
 tutorials/results/*
-inference.py
 run_single.sh
 train_deepspeed.py
 run_acclerate2.sh

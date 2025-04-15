@@ -24,12 +24,7 @@ from scmamba2.utils.process import lsi
 from scmamba2.dataset.dataset import MultiomeDataset
 from scmamba2.models.scmamba import scMambaLMHeadModel
 from scmamba2.models.config_scmamba import scMambaConfig
-from scmamba2.loss import CLIPLoss, ContrastiveLoss
-from scmamba2.trainer import Trainer
-from scmamba2.utils.metrics import (
-    biology_conservation, omics_mixing, mean_F1_silhouette
-)
-from scmamba2.utils.plot import plot_paired_umap
+from scmamba2.loss import ContrastiveLoss
 from scmamba2 import logger
 
 
@@ -135,7 +130,7 @@ def main(args):
     )
     # Loss and optimizer
     criterion = ContrastiveLoss(
-        cos_simi_scale=args.cos_simi_scale
+        temperature=args.temperature, cos_simi_scale=args.cos_simi_scale
     )
     optimizer = optim.AdamW(
         model.parameters(), lr=args.lr, weight_decay=args.weight_decay
@@ -199,7 +194,7 @@ def main(args):
     if accelerator.is_main_process:
         torch.save({
             "model_state_dict": model.state_dict(),
-        }, f"{out_dir}/checkpoints/scMamba.pt")
+        }, f"{checkpoints_path}/scMamba.pt")
 
 
 if __name__ == "__main__":
@@ -221,8 +216,7 @@ if __name__ == "__main__":
     parser.add_argument("--dropout", type=float, default=0.1)
     parser.add_argument("--hidden_dropout_prob", type=float, default=0.1)
     parser.add_argument("--normalize", action="store_true", default=False)
-    parser.add_argument("--requires_grad", action="store_true", default=True)
-    parser.add_argument("--fast_dev_run", action="store_true", default=False)
+    parser.add_argument("--temperature", type=float, default=0.2)
     parser.add_argument("--cos_simi_scale", type=float, default=1)
     parser.add_argument("--epoch_nums", type=int, default=80)
     parser.add_argument("--results_dir", type=str, default='results')

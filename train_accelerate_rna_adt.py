@@ -161,8 +161,8 @@ def main(args):
             loop.set_postfix(loss=loss.item())
         writer.add_scalar("train loss", runing_loss / len(train_dataloader), epoch)
         
-        if (epoch + 1) % 10 == 0:
-            accelerator.save_state(output_dir=checkpoints_path)
+        # if (epoch + 1) % 10 == 0:
+        #     accelerator.save_state(output_dir=checkpoints_path)
         writer.close()
     accelerator.wait_for_everyone()
     accelerator.end_training()

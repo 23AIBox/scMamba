@@ -129,12 +129,12 @@ def main(args):
         biology_conservation_metrics, best_res= biology_conservation(
             concate_emb, concate_emb.obs['cell_type'].values
         )
-        logger.info("Calculating omics mixing metrics...")
+        logger.info("Calculating omics alignment metrics...")
         omics_mixing_metrics = omics_mixing(
             concate_emb, concate_emb.obs['cell_type'].values, concate_emb.obs['modality'].values
         )
         metrics_classified['biology conservation'] = biology_conservation_metrics
-        metrics_classified['omics mixing'] = omics_mixing_metrics
+        metrics_classified['omics alignment'] = omics_mixing_metrics
         
         metrics.update(biology_conservation_metrics)
         metrics.update(omics_mixing_metrics)
