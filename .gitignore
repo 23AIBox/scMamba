@@ -8,3 +8,5 @@ scmamba2/utils/__pycache__/*
 .vscode
 tutorials/results/*
 tutorials/*
+config_files/model.json
+config_files/scmamba2attn_config_rna_adt.json
