@@ -16,7 +16,7 @@ CUDA_VISIBLE_DEVICES=4,5 accelerate launch --num_processes=2 \
     --config_file config_files/accelerate_config.yaml --main_process_port $PORT \
     train_accelerate_rna_adt.py \
         --batch_size 64 \
-        --data_dir datasets/multiome/citeseq_BMMC_S1.h5mu \
+        --data_dir datasets/multiome/citeseq_BMMC_S1_tmp.h5mu \
         --batch_key batch \
         --n_top_genes 10240 \
         --binning 51 \
@@ -28,7 +28,7 @@ python inference_rna_adt.py \
     --checkpoints results/benckmark/citeseq_BMMC_S1batchsize64emb_dim64/checkpoints/scMamba.pt \
     --device cuda:4 \
     --batch_size 64 \
-    --data_dir datasets/multiome/citeseq_BMMC_S1.h5mu \
+    --data_dir datasets/multiome/citeseq_BMMC_S1_tmp.h5mu \
     --batch_key batch \
     --n_top_genes 10240 \
     --binning 51 \
