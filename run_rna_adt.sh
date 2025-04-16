@@ -12,7 +12,7 @@ unset CUDA_VISIBLE_DEVICES
 export PORT=$(python -Bu get_tcp_port.py 2>/dev/null | grep 'Distributed TCP PORT' | awk -F'|' '{print $2}' | xargs -n1 echo | head -n1)
 
 
-CUDA_VISIBLE_DEVICES=4,5 accelerate launch --num_processes=2 \
+CUDA_VISIBLE_DEVICES=1,2 accelerate launch --num_processes=2 \
     --config_file config_files/accelerate_config.yaml --main_process_port $PORT \
     train_accelerate_rna_adt.py \
         --batch_size 64 \
@@ -26,7 +26,7 @@ CUDA_VISIBLE_DEVICES=4,5 accelerate launch --num_processes=2 \
 
 python inference_rna_adt.py \
     --checkpoints results/benckmark/citeseq_BMMC_S1batchsize64emb_dim64/checkpoints/scMamba.pt \
-    --device cuda:4 \
+    --device cuda:1 \
     --batch_size 64 \
     --data_dir datasets/multiome/citeseq_BMMC_S1.h5mu \
     --batch_key batch \

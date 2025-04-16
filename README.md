@@ -62,6 +62,8 @@ python inference.py \
     --checkpoints results/checkpoints/PBMC.pt \
     --batch_size 128 \
     --data_dir datasets/multiome/PBMC.h5mu  \
+    --n_top_genes 10240 \
+    --n_top_peaks 20480 \
     --config config_files/scmamba2_config.json \
     --results_dir results/benckmark
 ```
