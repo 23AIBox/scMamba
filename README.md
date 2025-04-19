@@ -70,7 +70,7 @@ python inference.py \
 
 Make sure to adjust the paths to match your environment.
 
-All code will be publicly available following acceptance of the manuscript.
+**Note** : All code will be publicly available following acceptance of the manuscript.
 <!-- ### Model Train
 
 #### Single-GPU training
