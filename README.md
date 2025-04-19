@@ -70,7 +70,8 @@ python inference.py \
 
 Make sure to adjust the paths to match your environment.
 
-### Model Train
+All code will be publicly available following acceptance of the manuscript.
+<!-- ### Model Train
 
 #### Single-GPU training
 
@@ -100,4 +101,4 @@ To launch training with multi-GPU support via accelerate, use:
 sh run_acclerate.sh
 ```
 
-**Note** : Please ensure that the `run_accelerate.sh` script is modified to match your local environment (e.g., paths, device settings, number of processes).
+**Note** : Please ensure that the `run_accelerate.sh` script is modified to match your local environment (e.g., paths, device settings, number of processes). -->
